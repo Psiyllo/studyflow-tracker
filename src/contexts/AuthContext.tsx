@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password,
     });
-    
+
     if (error) {
       toast({
         title: "Erro ao fazer login",
@@ -52,24 +52,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive",
       });
     }
-    
+
     return { error };
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           display_name: displayName || email.split('@')[0],
         }
       }
     });
-    
+
     if (error) {
       toast({
         title: "Erro ao criar conta",
@@ -82,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Você já pode fazer login.",
       });
     }
-    
+
     return { error };
   };
 
