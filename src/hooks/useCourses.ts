@@ -42,7 +42,7 @@ export const useCourses = () => {
 
   useEffect(() => {
     fetchCourses();
-  }, [user]);
+  }, [user?.id]);
 
   const createCourse = async (courseData: Omit<Course, 'id' | 'user_id' | 'created_at'>) => {
     if (!user) return { error: new Error('User not authenticated') };

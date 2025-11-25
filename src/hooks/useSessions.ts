@@ -74,7 +74,7 @@ export const useSessions = (filters?: Filters) => {
 
   useEffect(() => {
     fetchSessions();
-  }, [user, JSON.stringify(filters)]);
+  }, [user?.id, filters?.courseId, filters?.studyType, filters?.startDate, filters?.endDate]);
 
   return {
     sessions,
