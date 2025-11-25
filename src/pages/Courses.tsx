@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
+// Mantendo seus imports de lógica e UI base
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Plus, BookOpen, ExternalLink, Edit, Trash } from 'lucide-react';
+import { Plus, BookOpen, ExternalLink, Edit, Trash, Sparkles } from 'lucide-react';
 import { useCourses } from '@/hooks/useCourses';
 import {
   Dialog,
@@ -23,6 +23,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 
 export default function Courses() {
+  // LÓGICA ORIGINAL MANTIDA
   const { courses, loading, createCourse, updateCourse, deleteCourse } = useCourses();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -85,174 +86,234 @@ export default function Courses() {
     setEditingCourse(null);
   };
 
-  const statusLabels = {
-    active: 'Ativo',
-    paused: 'Pausado',
-    completed: 'Completo',
-  };
-
-  const statusColors = {
-    active: 'bg-success/10 text-success border-success/20',
-    paused: 'bg-muted text-muted-foreground border-border',
-    completed: 'bg-primary/10 text-primary border-primary/20',
+  // DESIGN SYSTEM CONFIGURATION
+  // Mapeamento de cores atualizado para o tema Neon/Dark
+  const statusConfig = {
+    active: {
+      label: 'Em Andamento',
+      classes: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]'
+    },
+    paused: {
+      label: 'Pausado',
+      classes: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+    },
+    completed: {
+      label: 'Concluído',
+      classes: 'bg-violet-500/10 text-violet-400 border-violet-500/20 shadow-[0_0_10px_rgba(139,92,246,0.1)]'
+    }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <p>Carregando...</p>
-        </div>
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Meus Cursos</h1>
-            <p className="text-muted-foreground">
-              Gerencie os cursos que você está estudando
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
+      {/* BACKGROUND EFFECTS */}
+      <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" />
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
+      </div>
 
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Curso
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCourse ? 'Editar Curso' : 'Novo Curso'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Título *</Label>
-                  <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="Ex: Spring Boot Masterclass"
-                    required
-                  />
-                </div>
+      <div className="relative z-10">
+        <Navbar />
+        
+        <main className="container mx-auto px-4 py-10 max-w-7xl animate-fade-in">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight mb-2 bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
+                Meus Cursos
+              </h1>
+              <p className="text-zinc-400 text-lg">
+                Gerencie sua jornada de aprendizado.
+              </p>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="platform">Plataforma</Label>
-                  <Input
-                    id="platform"
-                    value={formData.platform}
-                    onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                    placeholder="Ex: Udemy, YouTube"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="url">URL</Label>
-                  <Input
-                    id="url"
-                    type="url"
-                    value={formData.url}
-                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                    placeholder="https://..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Ativo</SelectItem>
-                      <SelectItem value="paused">Pausado</SelectItem>
-                      <SelectItem value="completed">Completo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button type="submit" className="w-full">
-                  {editingCourse ? 'Atualizar' : 'Criar'} Curso
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {courses.length === 0 ? (
-          <Card className="p-12 text-center">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum curso ainda</h3>
-            <p className="text-muted-foreground mb-4">
-              Comece adicionando seu primeiro curso!
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Curso
-            </Button>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <Card key={course.id} className="p-6 hover:border-primary/50 transition-colors">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-1">{course.title}</h3>
-                    {course.platform && (
-                      <p className="text-sm text-muted-foreground">{course.platform}</p>
-                    )}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <button className="group relative inline-flex items-center justify-center gap-2 px-6 py-3 font-medium text-white transition-all duration-300 bg-violet-600/20 border border-violet-500/50 rounded-xl hover:bg-violet-600/30 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:-translate-y-0.5">
+                  <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                  <span>Novo Curso</span>
+                </button>
+              </DialogTrigger>
+              
+              <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100 sm:rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold">
+                    {editingCourse ? 'Editar Curso' : 'Adicionar Novo Curso'}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-zinc-400">Título do Curso</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="Ex: Spring Boot Masterclass"
+                      required
+                      className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
+                    />
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[course.status]}`}>
-                    {statusLabels[course.status]}
-                  </span>
-                </div>
 
-                <div className="flex gap-2 mt-4">
-                  {course.url && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => window.open(course.url!, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="platform" className="text-zinc-400">Plataforma</Label>
+                        <Input
+                        id="platform"
+                        value={formData.platform}
+                        onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                        placeholder="Ex: Udemy"
+                        className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
+                        />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="status" className="text-zinc-400">Status</Label>
+                        <Select
+                        value={formData.status}
+                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                        >
+                        <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
+                            <SelectItem value="active">Em Andamento</SelectItem>
+                            <SelectItem value="paused">Pausado</SelectItem>
+                            <SelectItem value="completed">Concluído</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="url" className="text-zinc-400">Link do Curso (URL)</Label>
+                    <Input
+                      id="url"
+                      type="url"
+                      value={formData.url}
+                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                      placeholder="https://..."
+                      className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
+                    />
+                  </div>
+
+                  <div className="pt-2">
+                    <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-violet-900/20">
+                      {editingCourse ? 'Salvar Alterações' : 'Criar Curso'}
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(course)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleDelete(course.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
-        )}
+
+          {/* Empty State */}
+          {courses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-zinc-900/20 backdrop-blur-sm">
+              <div className="p-4 bg-zinc-800/50 rounded-full mb-4 ring-1 ring-white/10">
+                <BookOpen className="h-8 w-8 text-zinc-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-white">Sua biblioteca está vazia</h3>
+              <p className="text-zinc-400 mb-6 max-w-sm">
+                Adicione seu primeiro curso para começar a acompanhar seu progresso.
+              </p>
+              <Button 
+                onClick={() => setIsDialogOpen(true)}
+                variant="outline"
+                className="border-white/10 hover:bg-white/5 hover:text-white"
+              >
+                Começar Agora
+              </Button>
+            </div>
+          ) : (
+            /* Course Grid - NOVO DESIGN */
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course) => {
+                const statusInfo = statusConfig[course.status as keyof typeof statusConfig] || statusConfig.active;
+                
+                return (
+                  <div 
+                    key={course.id} 
+                    className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:border-violet-500/30 hover:bg-zinc-900/60 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50"
+                  >
+                    {/* Glow effect on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+
+                    <div className="relative z-10 flex flex-col h-full">
+                      {/* Top Row: Icon & Status */}
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="p-3 rounded-xl bg-zinc-800/50 border border-white/5 group-hover:border-violet-500/20 group-hover:bg-violet-500/10 transition-colors">
+                            <BookOpen className="h-6 w-6 text-zinc-400 group-hover:text-violet-400 transition-colors" />
+                        </div>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${statusInfo.classes}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+
+                      {/* Content */}
+                      <div className="mb-6 flex-1">
+                        <h3 className="text-xl font-bold text-zinc-100 mb-1 line-clamp-2 group-hover:text-white transition-colors">
+                            {course.title}
+                        </h3>
+                        {course.platform && (
+                          <p className="text-sm text-zinc-500 flex items-center gap-1">
+                             <Sparkles className="w-3 h-3 text-zinc-600" />
+                             {course.platform}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Actions Footer */}
+                      <div className="pt-4 border-t border-white/5 flex items-center gap-2">
+                        {course.url && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="flex-1 bg-white/5 hover:bg-white/10 hover:text-white text-zinc-300 border border-white/5"
+                            onClick={() => window.open(course.url!, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Acessar
+                          </Button>
+                        )}
+                        
+                        <div className="flex gap-1">
+                            <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-white/10"
+                            onClick={() => handleEdit(course)}
+                            >
+                            <Edit className="h-4 w-4" />
+                            </Button>
+                            
+                            <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-9 w-9 text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
+                            onClick={() => handleDelete(course.id)}
+                            >
+                            <Trash className="h-4 w-4" />
+                            </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </main>
       </div>
     </div>
   );
