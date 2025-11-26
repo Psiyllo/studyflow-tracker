@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Plus, BookOpen, ExternalLink, Edit, Trash, Sparkles } from 'lucide-react';
-import { useCourses } from '@/hooks/useCourses';
+import { Link, useNavigate } from "react-router-dom"; // ✨ CORREÇÃO 1: Importamos useNavigate
+import { Plus, BookOpen, ExternalLink, Edit, Trash, Sparkles, NotebookText } from 'lucide-react';
+import { useCourses, CourseNote } from '@/hooks/useCourses'; // Importado CourseNote
+
 import {
   Dialog,
   DialogContent,
@@ -21,7 +23,23 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 
-// NOVO COMPONENTE: Skeleton para o Card de CursoF
+// NOVO COMPONENTE: Item de Anotação do Curso
+const CourseNoteItem = ({ title, description }: { title: string, description: string }) => (
+  <div className="flex items-start gap-3 p-3 bg-zinc-800/50 rounded-lg border border-white/5 transition-all duration-300 hover:bg-zinc-800/70">
+    <div className="h-2 w-2 mt-2 flex-shrink-0 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+    <div>
+      <h4 className="text-sm font-semibold text-zinc-200 line-clamp-1">{title}</h4>
+      {description && (
+        // Exibe apenas a descrição se ela existir
+        <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">
+          {description}
+        </p>
+      )}
+    </div>
+  </div>
+);
+
+// NOVO COMPONENTE: Skeleton para o Card de Curso
 const CourseCardSkeleton = () => (
   <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 h-[180px] animate-pulse">
     <div className="flex justify-between items-start mb-4">
@@ -49,6 +67,7 @@ const CourseCardSkeleton = () => (
 export default function Courses() {
   // LÓGICA ORIGINAL MANTIDA
   const { courses, loading, createCourse, updateCourse, deleteCourse } = useCourses();
+  const navigate = useNavigate(); // ✨ CORREÇÃO 2: Inicializamos o hook de navegação
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -122,13 +141,6 @@ export default function Courses() {
     }
   };
 
-  // *** REMOVIDA A CONDICIONAL QUE BLOQUEAVA A TELA INTEIRA ***
-  /*
-  if (loading) {
-     return (...) // ESTE CÓDIGO CAUSAVA O FLICKERING NA NAVBAR
-  }
-  */
-
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
       {/* BACKGROUND EFFECTS (mantidos) */}
@@ -168,9 +180,11 @@ export default function Courses() {
               <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100 sm:rounded-2xl">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-bold">
-                    {editingCourse ? 'Editar Curso' : 'Adicionar Novo Curso'}
+                    {editingCourse ? "Editar Curso" : "Adicionar Novo Curso"}
                   </DialogTitle>
                 </DialogHeader>
+
+                {/* AQUI ESTAVA O PROBLEMA — FALTAVA FECHAR FORM */}
                 <form onSubmit={handleSubmit} className="space-y-5 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="title" className="text-zinc-400">Título do Curso</Label>
@@ -227,8 +241,11 @@ export default function Courses() {
                   </div>
 
                   <div className="pt-2">
-                    <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-violet-900/20">
-                      {editingCourse ? 'Salvar Alterações' : 'Criar Curso'}
+                    <Button
+                      type="submit"
+                      className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-violet-900/20"
+                    >
+                      {editingCourse ? "Salvar Alterações" : "Criar Curso"}
                     </Button>
                   </div>
                 </form>
@@ -268,6 +285,7 @@ export default function Courses() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => {
                 const statusInfo = statusConfig[course.status as keyof typeof statusConfig] || statusConfig.active;
+                const courseNotes = course.notes || []; // Garante que é um array
 
                 return (
                   <div
@@ -294,15 +312,39 @@ export default function Courses() {
                           {course.title}
                         </h3>
                         {course.platform && (
-                          <p className="text-sm text-zinc-500 flex items-center gap-1">
+                          <p className="text-sm text-zinc-500 flex items-center gap-1 mb-4">
                             <Sparkles className="w-3 h-3 text-zinc-600" />
                             {course.platform}
                           </p>
                         )}
+
+                        {/* *** NOVO: Renderização das Anotações *** */}
+                        {courseNotes.length > 0 && (
+                          <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                            <p className="text-xs font-medium text-zinc-400 mb-1 flex items-center gap-1">
+                              <NotebookText className='h-3 w-3' />
+                              Anotações ({courseNotes.length})
+                            </p>
+                            {courseNotes.slice(0, 3).map((note: CourseNote) => (
+                              <CourseNoteItem
+                                key={note.id}
+                                title={note.title}
+                                description={note.description}
+                              />
+                            ))}
+                            {courseNotes.length > 3 && (
+                              <p className="text-xs text-zinc-500 pt-1">
+                                + {courseNotes.length - 3} anotações...
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {/* *** FIM: Renderização das Anotações *** */}
+
                       </div>
 
                       {/* Actions Footer */}
-                      <div className="pt-4 border-t border-white/5 flex items-center gap-2">
+                      <div className="pt-4 border-t border-white/5 flex items-center gap-2 mt-auto">
                         {course.url && (
                           <Button
                             size="sm"
@@ -323,6 +365,18 @@ export default function Courses() {
                             onClick={() => handleEdit(course)}
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+
+                          {/* Botão Anotações: CORREÇÃO APLICADA */}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Ver Anotações"
+                            className="h-9 w-9 text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10"
+                            // ✨ CORREÇÃO 3: Usando a função navigate
+                            onClick={() => navigate(`/courses/${course.id}/notes`)}
+                          >
+                            <NotebookText className="h-4 w-4" />
                           </Button>
 
                           <Button

@@ -14,6 +14,7 @@ import Courses from "./pages/Courses";
 import Sessions from "./pages/Sessions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import CourseNotes from "./pages/CourseNotes";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,14 @@ const App = () => {
                   element={
                     <ProtectedRoute>
                       <Courses />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/courses/:id/notes"
+                  element={
+                    <ProtectedRoute>
+                      <CourseNotes />
                     </ProtectedRoute>
                   }
                 />

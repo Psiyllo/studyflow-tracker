@@ -1,6 +1,14 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+
+export interface CourseNote {
+  id: string;
+  course_id: string;
+  title: string;
+  description: string;
+  created_at: string;
+}
 
 export interface Course {
   id: string;
@@ -8,9 +16,11 @@ export interface Course {
   title: string;
   platform: string | null;
   url: string | null;
-  status: 'active' | 'paused' | 'completed';
+  status: "active" | "paused" | "completed";
   created_at: string;
+  notes?: CourseNote[];
 }
+
 
 export const useCourses = () => {
   const { user } = useAuth();
@@ -26,15 +36,24 @@ export const useCourses = () => {
 
     try {
       const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .from("courses")
+        .select(`
+          *,
+          course_notes (*)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setCourses(data || []);
+
+      const formatted = (data || []).map((course: any) => ({
+        ...course,
+        notes: course.course_notes || [],
+      }));
+
+      setCourses(formatted);
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error("Error fetching courses:", error);
     } finally {
       setLoading(false);
     }
@@ -44,12 +63,14 @@ export const useCourses = () => {
     fetchCourses();
   }, [user?.id]);
 
-  const createCourse = async (courseData: Omit<Course, 'id' | 'user_id' | 'created_at'>) => {
-    if (!user) return { error: new Error('User not authenticated') };
+  const createCourse = async (
+    courseData: Omit<Course, "id" | "user_id" | "created_at" | "notes">
+  ) => {
+    if (!user) return { error: new Error("User not authenticated") };
 
     try {
       const { data, error } = await supabase
-        .from('courses')
+        .from("courses")
         .insert({
           user_id: user.id,
           ...courseData,
@@ -58,6 +79,7 @@ export const useCourses = () => {
         .single();
 
       if (error) throw error;
+
       await fetchCourses();
       return { data, error: null };
     } catch (error) {
@@ -68,11 +90,12 @@ export const useCourses = () => {
   const updateCourse = async (id: string, updates: Partial<Course>) => {
     try {
       const { error } = await supabase
-        .from('courses')
+        .from("courses")
         .update(updates)
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
+
       await fetchCourses();
       return { error: null };
     } catch (error) {
@@ -82,12 +105,10 @@ export const useCourses = () => {
 
   const deleteCourse = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('courses')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("courses").delete().eq("id", id);
 
       if (error) throw error;
+
       await fetchCourses();
       return { error: null };
     } catch (error) {
