@@ -72,6 +72,25 @@ export const useSessions = (filters?: Filters) => {
     }
   };
 
+  const deleteSession = async (sessionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('study_sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setSessions(sessions.filter(s => s.id !== sessionId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchSessions();
   }, [user?.id, filters?.courseId, filters?.studyType, filters?.startDate, filters?.endDate]);
@@ -80,5 +99,6 @@ export const useSessions = (filters?: Filters) => {
     sessions,
     loading,
     refetch: fetchSessions,
+    deleteSession,
   };
 };

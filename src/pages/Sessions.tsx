@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Timer } from '@/components/Timer'; 
 import { Button } from '@/components/ui/button';
-import { Play, Filter, Clock, BookOpen, ChevronRight } from 'lucide-react';
+import { Play, Filter, Clock, BookOpen, ChevronRight, Trash2, X } from 'lucide-react';
 import { useTimer } from '@/contexts/TimerContext';
 import { useSessions } from '@/hooks/useSessions';
 import { useCourses } from '@/hooks/useCourses';
@@ -13,6 +13,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -22,6 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
 
 const studyTypesConfig: { [key: string]: { label: string, icon: JSX.Element, color: string } } = {
   video: { label: 'Vídeo Aula', icon: <Play className="h-4 w-4" />, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20' },
@@ -37,11 +47,18 @@ const studyTypes = Object.keys(studyTypesConfig).map(key => ({
 
 export default function Sessions() {
   const { startTimer, isRunning } = useTimer();
-  const [filters, setFilters] = useState({});
-  const { sessions, loading } = useSessions(filters);
+  const [filters, setFilters] = useState({
+    courseId: '',
+    studyType: '',
+  });
+  const { sessions, loading, deleteSession } = useSessions(
+    filters.courseId || filters.studyType ? filters : undefined
+  );
   const { courses } = useCourses();
   
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [startForm, setStartForm] = useState({
     courseId: '',
     studyType: 'video',
@@ -50,7 +67,11 @@ export default function Sessions() {
 
   const handleStartSession = () => {
     if (!startForm.courseId) {
-      alert('Selecione um curso!');
+      toast({
+        title: "Erro",
+        description: "Selecione um curso!",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -62,6 +83,23 @@ export default function Sessions() {
 
     setIsStartDialogOpen(false);
     setStartForm({ courseId: '', studyType: 'video', notes: '' });
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    const success = await deleteSession(sessionId);
+    if (success) {
+      toast({
+        title: "Sucesso",
+        description: "Sessão deletada com sucesso.",
+      });
+      setSessionToDelete(null);
+    } else {
+      toast({
+        title: "Erro",
+        description: "Não foi possível deletar a sessão.",
+        variant: "destructive",
+      });
+    }
   };
 
   const activeCourses = courses.filter(c => c.status === 'active');
@@ -181,10 +219,116 @@ export default function Sessions() {
           <div className="mt-12">
             <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
               <h2 className="text-2xl font-bold text-white">Histórico de Sessões</h2>
-              <Button variant="ghost" size="sm" className="gap-2 text-zinc-400 border border-white/5 hover:bg-white/10 hover:text-white">
+              <button
+                onClick={() => setIsFiltersOpen(true)}
+                className="gap-2 text-zinc-400 border border-white/5 hover:bg-white/10 hover:text-white px-3 py-2 rounded-md inline-flex items-center text-sm transition-colors"
+              >
                 <Filter className="h-4 w-4" />
                 Filtros
-              </Button>
+                {(filters.courseId || filters.studyType) && (
+                  <span className="ml-1 bg-violet-500 text-white text-xs rounded-full px-2 py-0.5">
+                    {[filters.courseId, filters.studyType].filter(Boolean).length}
+                  </span>
+                )}
+              </button>
+
+              {isFiltersOpen && (
+                <div className="fixed inset-0 z-50 bg-black/80" onClick={() => setIsFiltersOpen(false)}>
+                  <div 
+                    className="fixed left-[50%] top-[50%] z-50 w-full max-w-sm translate-x-[-50%] translate-y-[-50%] bg-zinc-950/95 backdrop-blur-xl border border-white/10 text-zinc-100 sm:rounded-2xl p-6 shadow-lg"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-white">Filtrar Sessões</h2>
+                      <button
+                        onClick={() => setIsFiltersOpen(false)}
+                        className="text-zinc-400 hover:text-white transition-colors"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-5">
+                      <div className="space-y-2">
+                        <Label className="text-zinc-400">Curso</Label>
+                        <div className="flex gap-2">
+                          <Select
+                            value={filters.courseId}
+                            onValueChange={(value) => setFilters({ ...filters, courseId: value })}
+                          >
+                            <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20 flex-1">
+                              <SelectValue placeholder="Selecionar curso..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
+                              {courses.map((course) => (
+                                <SelectItem key={course.id} value={course.id}>
+                                  {course.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {filters.courseId && (
+                            <button
+                              onClick={() => setFilters({ ...filters, courseId: '' })}
+                              className="px-3 py-2 rounded-md bg-zinc-900/50 border border-white/10 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-zinc-400">Tipo de Estudo</Label>
+                        <div className="flex gap-2">
+                          <Select
+                            value={filters.studyType}
+                            onValueChange={(value) => setFilters({ ...filters, studyType: value })}
+                          >
+                            <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20 flex-1">
+                              <SelectValue placeholder="Selecionar tipo..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
+                              {studyTypes.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {filters.studyType && (
+                            <button
+                              onClick={() => setFilters({ ...filters, studyType: '' })}
+                              className="px-3 py-2 rounded-md bg-zinc-900/50 border border-white/10 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-4">
+                        <Button
+                          onClick={() => {
+                            setFilters({ courseId: '', studyType: '' });
+                            setIsFiltersOpen(false);
+                          }}
+                          variant="ghost"
+                          className="flex-1 text-zinc-400 border border-white/10 hover:bg-white/10"
+                        >
+                          Limpar Filtros
+                        </Button>
+                        <Button
+                          onClick={() => setIsFiltersOpen(false)}
+                          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white"
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {loading ? (
@@ -226,11 +370,45 @@ export default function Sessions() {
                           )}
                         </div>
                         
-                        <div className="text-right pl-4 flex-shrink-0">
-                          <div className="text-4xl font-mono font-bold text-violet-400 tracking-tighter">
-                            {session.duration_minutes}
+                        <div className="flex items-center gap-4 pl-4 flex-shrink-0">
+                          <div className="text-right">
+                            <div className="text-2xl font-mono font-bold text-violet-400 tracking-tighter">
+                              {session.duration_minutes}
+                            </div>
+                            <div className="text-xs text-zinc-500 uppercase font-medium">minutos</div>
                           </div>
-                          <div className="text-xs text-zinc-500 uppercase font-medium">minutos</div>
+
+                          <AlertDialog open={sessionToDelete === session.id} onOpenChange={(open) => {
+                            if (!open) setSessionToDelete(null);
+                          }}>
+                            <button
+                              onClick={() => setSessionToDelete(session.id)}
+                              className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                              title="Deletar sessão"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+
+                            <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">Deletar Sessão</AlertDialogTitle>
+                                <AlertDialogDescription className="text-zinc-400">
+                                  Tem certeza que deseja deletar esta sessão? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <div className="flex gap-3">
+                                <AlertDialogCancel className="bg-zinc-900 border-white/10 text-white hover:bg-zinc-800">
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDeleteSession(session.id)}
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                >
+                                  Deletar
+                                </AlertDialogAction>
+                              </div>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </div>
