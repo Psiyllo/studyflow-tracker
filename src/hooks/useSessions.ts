@@ -82,7 +82,6 @@ export const useSessions = (filters?: Filters) => {
 
       if (error) throw error;
 
-      // Remove from local state
       setSessions(sessions.filter(s => s.id !== sessionId));
       return true;
     } catch (error) {
