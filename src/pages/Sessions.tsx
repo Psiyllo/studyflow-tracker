@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-// Componente Timer não foi fornecido, mas será estilizado com base no novo tema.
 import { Timer } from '@/components/Timer'; 
 import { Button } from '@/components/ui/button';
 import { Play, Filter, Clock, BookOpen, ChevronRight } from 'lucide-react';
@@ -24,7 +23,6 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 
-// Mapeamento de Tipos de Estudo para ícones e cores para o tema escuro
 const studyTypesConfig: { [key: string]: { label: string, icon: JSX.Element, color: string } } = {
   video: { label: 'Vídeo Aula', icon: <Play className="h-4 w-4" />, color: 'text-violet-400 bg-violet-500/10 border-violet-500/20' },
   reading: { label: 'Leitura', icon: <BookOpen className="h-4 w-4" />, color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
@@ -38,7 +36,6 @@ const studyTypes = Object.keys(studyTypesConfig).map(key => ({
 }));
 
 export default function Sessions() {
-  // --- LÓGICA ORIGINAL (MANTIDA 100%) ---
   const { startTimer, isRunning } = useTimer();
   const [filters, setFilters] = useState({});
   const { sessions, loading } = useSessions(filters);
@@ -53,7 +50,7 @@ export default function Sessions() {
 
   const handleStartSession = () => {
     if (!startForm.courseId) {
-      alert('Selecione um curso!'); // Mantendo o alert original
+      alert('Selecione um curso!');
       return;
     }
 
@@ -79,13 +76,10 @@ export default function Sessions() {
       minute: '2-digit',
     }).format(date);
   };
-  // --- FIM DA LÓGICA ORIGINAL ---
-
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
-      
-      {/* BACKGROUND EFFECTS */}
+    
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
           <div className="absolute top-[20%] right-[-10%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" />
           <div className="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px]" />
@@ -96,7 +90,6 @@ export default function Sessions() {
         <Navbar />
         
         <div className="container mx-auto px-4 py-10 max-w-7xl animate-fade-in">
-          {/* Header Section */}
           <div className="mb-10">
             <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent tracking-tight">
               Sessões de Estudo
@@ -106,12 +99,10 @@ export default function Sessions() {
             </p>
           </div>
 
-          {/* Timer - Assumindo que o componente Timer será estilizado para combinar */}
           <div className="mb-10">
             <Timer />
           </div>
 
-          {/* Start button */}
           {!isRunning && (
             <div className="mb-10">
               <Dialog open={isStartDialogOpen} onOpenChange={setIsStartDialogOpen}>
@@ -122,7 +113,6 @@ export default function Sessions() {
                   </button>
                 </DialogTrigger>
                 
-                {/* Modal de Início de Sessão (Estilo Dark UI) */}
                 <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100 sm:rounded-2xl">
                   <DialogHeader>
                     <DialogTitle className="text-xl font-bold text-white">
@@ -188,7 +178,6 @@ export default function Sessions() {
             </div>
           )}
 
-          {/* History */}
           <div className="mt-12">
             <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
               <h2 className="text-2xl font-bold text-white">Histórico de Sessões</h2>
@@ -216,7 +205,6 @@ export default function Sessions() {
                       className="group bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-xl p-5 transition-all duration-300 hover:border-violet-500/20 hover:bg-zinc-900/60 hover:shadow-lg hover:shadow-black/20"
                     >
                       <div className="flex items-start justify-between">
-                        {/* Course & Type Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
                             <span className={`text-xs font-medium px-2 py-1 rounded-full border ${type.color}`}>
@@ -238,7 +226,6 @@ export default function Sessions() {
                           )}
                         </div>
                         
-                        {/* Duration */}
                         <div className="text-right pl-4 flex-shrink-0">
                           <div className="text-4xl font-mono font-bold text-violet-400 tracking-tighter">
                             {session.duration_minutes}

@@ -1,38 +1,33 @@
-import { useParams, useNavigate } from "react-router-dom"; // ✨ Adicionado useNavigate
+import { useParams, useNavigate } from "react-router-dom"; 
 import { useCourseNotes } from "@/hooks/useCoursesNotes";
-import { useCourses } from "@/hooks/useCourses"; // ✨ Para buscar o nome do curso
+import { useCourses } from "@/hooks/useCourses";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // ✨ Adicionado DialogHeader/Title
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useEffect } from "react"; // ✨ Adicionado useEffect
-import { Navbar } from '@/components/Navbar'; // ✨ Adicionado Navbar
-import { ArrowLeft, NotebookText, Trash, Edit, Plus, ExternalLink } from 'lucide-react'; // ✨ Novos ícones
-import { toast } from "@/hooks/use-toast"; // ✨ Adicionado Toast para feedback
+import { useState, useEffect } from "react";
+import { Navbar } from '@/components/Navbar'; 
+import { ArrowLeft, NotebookText, Trash, Edit, Plus, ExternalLink } from 'lucide-react';
+import { toast } from "@/hooks/use-toast"; 
 
 export default function CourseNotes() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { notes, addNote, updateNote, deleteNote } = useCourseNotes(id!);
-    
-    // Tentamos buscar a informação do curso para mostrar no cabeçalho
     const { courses } = useCourses();
     const course = courses.find(c => c.id === id);
-
     const [open, setOpen] = useState(false);
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
-    const [editingNoteId, setEditingNoteId] = useState<string | null>(null); // ✨ Estado para controlar a edição
+    const [editingNoteId, setEditingNoteId] = useState<string | null>(null); 
 
-    // Função para limpar o formulário
     const resetForm = () => {
         setTitle("");
         setDesc("");
         setEditingNoteId(null);
     };
 
-    // Lógica unificada para Adicionar/Editar
     const handleSave = async () => {
         if (title.trim() === "") {
             toast({ title: "Erro", description: "O título da anotação não pode ser vazio.", variant: "destructive" });
@@ -56,7 +51,6 @@ export default function CourseNotes() {
         resetForm();
     };
 
-    // Lógica para abrir o modal em modo de edição
     const handleEdit = (note: { id: string, title: string, description: string }) => {
         setTitle(note.title);
         setDesc(note.description);
@@ -64,7 +58,6 @@ export default function CourseNotes() {
         setOpen(true);
     };
 
-    // Efeito para limpar o formulário ao fechar o modal, se não estiver salvando
     useEffect(() => {
         if (!open) {
             resetForm();
@@ -73,9 +66,7 @@ export default function CourseNotes() {
 
 
     return (
-        // Estrutura de fundo e efeitos de glow
         <div className="min-h-screen bg-[#09090b] text-zinc-100 relative overflow-x-hidden">
-            {/* Background Effects (replicado de Courses.tsx) */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px]" />
                 <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" />
@@ -83,17 +74,14 @@ export default function CourseNotes() {
             </div>
 
             <div className="relative z-10">
-                <Navbar /> {/* ✨ Header aberto */}
-
+                <Navbar />
                 <main className="container mx-auto px-4 py-10 max-w-7xl animate-fade-in">
-
-                    {/* ✨ Novo Header da Página de Anotações (com botão de voltar) */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-white/5 pb-6">
                         <div className="flex items-center gap-4">
                             <Button
                                 size="icon"
                                 variant="ghost"
-                                onClick={() => navigate(-1)} // ✨ Botão de Voltar
+                                onClick={() => navigate(-1)} 
                                 className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-white/10"
                             >
                                 <ArrowLeft className="h-5 w-5" />
@@ -119,7 +107,7 @@ export default function CourseNotes() {
                         </div>
 
                         <Button 
-                            onClick={() => { setOpen(true); resetForm(); }} // Garantimos o reset para "Nova Anotação"
+                            onClick={() => { setOpen(true); resetForm(); }} 
                             className="group relative inline-flex items-center justify-center gap-2 px-6 py-3 font-medium text-white transition-all duration-300 bg-violet-600/20 border border-violet-500/50 rounded-xl hover:bg-violet-600/30 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)]"
                         >
                             <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
@@ -127,7 +115,6 @@ export default function CourseNotes() {
                         </Button>
                     </div>
 
-                    {/* Lista de Anotações */}
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {notes.length === 0 ? (
                             <div className="md:col-span-3 flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-zinc-900/20 backdrop-blur-sm">
@@ -148,7 +135,6 @@ export default function CourseNotes() {
                             </div>
                         ) : (
                             notes.map(note => (
-                                // ✨ Card estilizado
                                 <Card 
                                     key={note.id} 
                                     className="bg-zinc-900/40 border-white/5 transition-all duration-300 hover:border-violet-500/30 hover:bg-zinc-900/60 hover:-translate-y-0.5"
@@ -190,7 +176,6 @@ export default function CourseNotes() {
                         )}
                     </div>
 
-                    {/* Modal/Dialog para Nova Anotação ou Edição */}
                     <Dialog open={open} onOpenChange={setOpen}>
                         <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100 sm:rounded-2xl">
                             <DialogHeader>

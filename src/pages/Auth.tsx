@@ -41,24 +41,18 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#09090b] relative overflow-hidden selection:bg-violet-500/30">
-      
-      {/* --- BACKGROUND EFFECTS (Atmosphere) --- */}
-      {/* Blob Roxo superior esquerdo */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" />
-      {/* Blob Azul inferior direito */}
+
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
-      {/* Grid Pattern sutil */}
+
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 pointer-events-none"></div>
 
-      {/* --- CARD PRINCIPAL --- */}
       <div className="w-full max-w-md mx-4 relative z-10">
-        
-        {/* Efeito de brilho atrás do card */}
+
         <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl blur opacity-20 transition duration-1000 group-hover:opacity-100"></div>
-        
+
         <div className="relative bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8">
-          
-          {/* Header */}
+
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/20 mb-4">
               <span className="text-white font-bold text-xl">S</span>
@@ -67,37 +61,32 @@ export default function Auth() {
               {isLogin ? "Bem-vindo de volta" : "Crie sua conta"}
             </h1>
             <p className="text-zinc-400 text-sm">
-              {isLogin 
-                ? "Gerencie suas horas de estudo com eficiência." 
+              {isLogin
+                ? "Gerencie suas horas de estudo com eficiência."
                 : "Comece a trackear sua jornada de aprendizado."}
             </p>
           </div>
-
-          {/* Toggle (Login vs Cadastro) */}
           <div className="grid grid-cols-2 gap-1 p-1 bg-zinc-950/50 rounded-lg mb-6 border border-white/5">
             <button
               onClick={() => setIsLogin(true)}
-              className={`text-sm font-medium py-2 rounded-md transition-all duration-200 ${
-                isLogin
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
+              className={`text-sm font-medium py-2 rounded-md transition-all duration-200 ${isLogin
+                ? "bg-zinc-800 text-white shadow-sm"
+                : "text-zinc-500 hover:text-zinc-300"
+                }`}
             >
               Login
             </button>
             <button
               onClick={() => setIsLogin(false)}
-              className={`text-sm font-medium py-2 rounded-md transition-all duration-200 ${
-                !isLogin
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
+              className={`text-sm font-medium py-2 rounded-md transition-all duration-200 ${!isLogin
+                ? "bg-zinc-800 text-white shadow-sm"
+                : "text-zinc-500 hover:text-zinc-300"
+                }`}
             >
               Criar Conta
             </button>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-medium text-zinc-300 ml-1">Email</label>
@@ -155,22 +144,20 @@ export default function Auth() {
             </button>
           </form>
 
-          {/* Footer Features */}
           {!isLogin && (
-             <div className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  <span>Dashboard grátis</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  <span>Sem cartão de crédito</span>
-                </div>
-             </div>
+            <div className="mt-6 pt-6 border-t border-white/5 grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                <span>Dashboard grátis</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                <span>Sem cartão de crédito</span>
+              </div>
+            </div>
           )}
         </div>
-        
-        {/* Footer Text */}
+
         <p className="text-center text-zinc-500 text-xs mt-8">
           &copy; 2024 StudyTrack. Todos os direitos reservados.
         </p>

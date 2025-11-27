@@ -32,7 +32,6 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
 
-  // Load persisted state from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('timer-state');
     if (saved) {
@@ -49,7 +48,6 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Persist state to localStorage
   useEffect(() => {
     if (isRunning || isPaused) {
       localStorage.setItem('timer-state', JSON.stringify({
@@ -64,7 +62,6 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isRunning, isPaused, elapsedSeconds, sessionData, startTime]);
 
-  // Timer interval
   useEffect(() => {
     let interval: NodeJS.Timeout;
     

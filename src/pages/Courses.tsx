@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Link, useNavigate } from "react-router-dom"; // ✨ CORREÇÃO 1: Importamos useNavigate
+import { Link, useNavigate } from "react-router-dom"; 
 import { Plus, BookOpen, ExternalLink, Edit, Trash, Sparkles, NotebookText } from 'lucide-react';
-import { useCourses, CourseNote } from '@/hooks/useCourses'; // Importado CourseNote
+import { useCourses, CourseNote } from '@/hooks/useCourses'; 
 
 import {
   Dialog,
@@ -23,14 +23,12 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 
-// NOVO COMPONENTE: Item de Anotação do Curso
 const CourseNoteItem = ({ title, description }: { title: string, description: string }) => (
   <div className="flex items-start gap-3 p-3 bg-zinc-800/50 rounded-lg border border-white/5 transition-all duration-300 hover:bg-zinc-800/70">
     <div className="h-2 w-2 mt-2 flex-shrink-0 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
     <div>
       <h4 className="text-sm font-semibold text-zinc-200 line-clamp-1">{title}</h4>
       {description && (
-        // Exibe apenas a descrição se ela existir
         <p className="text-xs text-zinc-500 line-clamp-2 mt-0.5">
           {description}
         </p>
@@ -39,22 +37,16 @@ const CourseNoteItem = ({ title, description }: { title: string, description: st
   </div>
 );
 
-// NOVO COMPONENTE: Skeleton para o Card de Curso
 const CourseCardSkeleton = () => (
   <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 h-[180px] animate-pulse">
     <div className="flex justify-between items-start mb-4">
-      {/* Placeholder para ícone */}
       <div className="p-3 rounded-xl bg-zinc-800/50 h-12 w-12" />
-      {/* Placeholder para status */}
       <div className="h-6 w-20 bg-zinc-800/50 rounded-full" />
     </div>
     <div className="space-y-2">
-      {/* Placeholder para título */}
       <div className="h-4 bg-zinc-800/50 rounded w-3/4" />
-      {/* Placeholder para plataforma */}
       <div className="h-4 bg-zinc-800/50 rounded w-1/2" />
     </div>
-    {/* Placeholder para botões */}
     <div className="pt-4 mt-4 border-t border-white/5 flex gap-2">
       <div className="h-9 w-1/2 bg-zinc-800/50 rounded-lg" />
       <div className="h-9 w-9 bg-zinc-800/50 rounded-lg" />
@@ -65,9 +57,8 @@ const CourseCardSkeleton = () => (
 
 
 export default function Courses() {
-  // LÓGICA ORIGINAL MANTIDA
   const { courses, loading, createCourse, updateCourse, deleteCourse } = useCourses();
-  const navigate = useNavigate(); // ✨ CORREÇÃO 2: Inicializamos o hook de navegação
+  const navigate = useNavigate(); 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -125,7 +116,6 @@ export default function Courses() {
     setEditingCourse(null);
   };
 
-  // DESIGN SYSTEM CONFIGURATION (mantida)
   const statusConfig = {
     active: {
       label: 'Em Andamento',
@@ -143,7 +133,6 @@ export default function Courses() {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
-      {/* BACKGROUND EFFECTS (mantidos) */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px]" />
@@ -154,7 +143,6 @@ export default function Courses() {
         <Navbar />
 
         <main className="container mx-auto px-4 py-10 max-w-7xl animate-fade-in">
-          {/* Header Section (mantida) */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div>
               <h1 className="text-4xl font-bold tracking-tight mb-2 bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
@@ -165,7 +153,6 @@ export default function Courses() {
               </p>
             </div>
 
-            {/* Dialog Trigger (mantido) */}
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) resetForm();
@@ -184,7 +171,6 @@ export default function Courses() {
                   </DialogTitle>
                 </DialogHeader>
 
-                {/* AQUI ESTAVA O PROBLEMA — FALTAVA FECHAR FORM */}
                 <form onSubmit={handleSubmit} className="space-y-5 mt-4">
                   <div className="space-y-2">
                     <Label htmlFor="title" className="text-zinc-400">Título do Curso</Label>
@@ -253,9 +239,7 @@ export default function Courses() {
             </Dialog>
           </div>
 
-          {/* *** ÁREA DA LISTA DE CURSOS *** */}
           {loading ? (
-            // 1. EXIBE O SKELETON ENQUANTO CARREGA
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               <CourseCardSkeleton />
               <CourseCardSkeleton />
@@ -263,7 +247,6 @@ export default function Courses() {
               <CourseCardSkeleton />
             </div>
           ) : courses.length === 0 ? (
-            // 2. ESTADO VAZIO APÓS O CARREGAMENTO
             <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-zinc-900/20 backdrop-blur-sm">
               <div className="p-4 bg-zinc-800/50 rounded-full mb-4 ring-1 ring-white/10">
                 <BookOpen className="h-8 w-8 text-zinc-400" />
@@ -281,22 +264,19 @@ export default function Courses() {
               </Button>
             </div>
           ) : (
-            // 3. CONTEÚDO REAL DA LISTA APÓS O CARREGAMENTO
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {courses.map((course) => {
                 const statusInfo = statusConfig[course.status as keyof typeof statusConfig] || statusConfig.active;
-                const courseNotes = course.notes || []; // Garante que é um array
+                const courseNotes = course.notes || []; 
 
                 return (
                   <div
                     key={course.id}
                     className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:border-violet-500/30 hover:bg-zinc-900/60 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50"
                   >
-                    {/* Glow effect on hover */}
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col h-full">
-                      {/* Top Row: Icon & Status */}
                       <div className="flex justify-between items-start mb-4">
                         <div className="p-3 rounded-xl bg-zinc-800/50 border border-white/5 group-hover:border-violet-500/20 group-hover:bg-violet-500/10 transition-colors">
                           <BookOpen className="h-6 w-6 text-zinc-400 group-hover:text-violet-400 transition-colors" />
@@ -306,7 +286,6 @@ export default function Courses() {
                         </span>
                       </div>
 
-                      {/* Content */}
                       <div className="mb-6 flex-1">
                         <h3 className="text-xl font-bold text-zinc-100 mb-1 line-clamp-2 group-hover:text-white transition-colors">
                           {course.title}
@@ -318,7 +297,6 @@ export default function Courses() {
                           </p>
                         )}
 
-                        {/* *** NOVO: Renderização das Anotações *** */}
                         {courseNotes.length > 0 && (
                           <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                             <p className="text-xs font-medium text-zinc-400 mb-1 flex items-center gap-1">
@@ -339,11 +317,7 @@ export default function Courses() {
                             )}
                           </div>
                         )}
-                        {/* *** FIM: Renderização das Anotações *** */}
-
                       </div>
-
-                      {/* Actions Footer */}
                       <div className="pt-4 border-t border-white/5 flex items-center gap-2 mt-auto">
                         {course.url && (
                           <Button
@@ -367,13 +341,11 @@ export default function Courses() {
                             <Edit className="h-4 w-4" />
                           </Button>
 
-                          {/* Botão Anotações: CORREÇÃO APLICADA */}
                           <Button
                             size="icon"
                             variant="ghost"
                             title="Ver Anotações"
                             className="h-9 w-9 text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10"
-                            // ✨ CORREÇÃO 3: Usando a função navigate
                             onClick={() => navigate(`/courses/${course.id}/notes`)}
                           >
                             <NotebookText className="h-4 w-4" />

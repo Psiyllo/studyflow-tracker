@@ -3,14 +3,12 @@ import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-// Não usaremos o Card padrão, mas divs estilizadas para manter a coerência visual.
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { LogOut, Save, User, Target, Settings as SettingsIcon } from 'lucide-react';
 
 export default function Settings() {
-  // --- LÓGICA ORIGINAL (MANTIDA 100%) ---
   const { user, signOut } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState({
@@ -77,12 +75,10 @@ export default function Settings() {
       setLoading(false);
     }
   };
-  // --- FIM DA LÓGICA ORIGINAL ---
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
       
-      {/* BACKGROUND EFFECTS */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
           <div className="absolute top-[10%] left-[5%] w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[120px]" />
           <div className="absolute bottom-[5%] right-[5%] w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[120px]" />
@@ -94,7 +90,6 @@ export default function Settings() {
         
         <div className="container mx-auto px-4 py-10 max-w-3xl animate-fade-in">
           
-          {/* Header Section */}
           <div className="mb-10 flex items-center gap-4 border-b border-white/5 pb-4">
             <SettingsIcon className="h-8 w-8 text-violet-400" />
             <div>
@@ -107,7 +102,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Seção de Perfil e Meta */}
           <div className="mb-8 p-6 bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl shadow-xl shadow-black/20">
              <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2 border-b border-white/5 pb-3">
                  <User className="h-5 w-5 text-violet-400" /> Detalhes do Perfil
@@ -115,7 +109,6 @@ export default function Settings() {
              
              <form onSubmit={handleSave} className="space-y-6">
                 
-                {/* Email Field (Disabled) */}
                 <div className="space-y-2">
                     <Label htmlFor="email" className="text-zinc-400">Email</Label>
                     <Input
@@ -130,7 +123,6 @@ export default function Settings() {
                     </p>
                 </div>
 
-                {/* Display Name Field */}
                 <div className="space-y-2">
                     <Label htmlFor="display_name" className="text-zinc-400">Nome de Exibição</Label>
                     <Input
@@ -142,7 +134,6 @@ export default function Settings() {
                     />
                 </div>
 
-                {/* Daily Goal Field */}
                 <div className="space-y-2">
                     <Label htmlFor="daily_goal" className="text-zinc-400 flex items-center gap-1">
                         <Target className="h-4 w-4 text-blue-400" /> Meta Diária (minutos)
@@ -159,8 +150,7 @@ export default function Settings() {
                         Defina o seu objetivo de estudo diário.
                     </p>
                 </div>
-
-                {/* Save Button */}
+                
                 <Button 
                     type="submit" 
                     disabled={loading} 
@@ -176,7 +166,6 @@ export default function Settings() {
              </form>
           </div>
 
-          {/* Seção de Gerenciamento de Conta */}
           <div className="p-6 bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl shadow-xl shadow-black/20">
             <h3 className="text-xl font-semibold mb-4 text-white flex items-center gap-2 border-b border-white/5 pb-3">
                 <LogOut className="h-5 w-5 text-red-400" /> Gerenciamento
