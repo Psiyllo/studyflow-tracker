@@ -80,18 +80,18 @@ export default function Courses() {
 
     const submitData = {
       title: formData.title,
-      platform: formData.type === 'course' ? formData.platform : null,
+      platform: activeTab === 'course' ? formData.platform : null,
       url: formData.url,
       status: formData.status,
-      type: formData.type,
+      type: activeTab, // Usar activeTab em vez de formData.type
     };
 
     if (editingCourse) {
       await updateCourse(editingCourse.id, submitData);
-      toast({ title: formData.type === 'course' ? "Curso atualizado com sucesso!" : "Aula atualizada com sucesso!" });
+      toast({ title: activeTab === 'course' ? "Curso atualizado com sucesso!" : "Aula atualizada com sucesso!" });
     } else {
       await createCourse(submitData as any);
-      toast({ title: formData.type === 'course' ? "Curso criado com sucesso!" : "Aula criada com sucesso!" });
+      toast({ title: activeTab === 'course' ? "Curso criado com sucesso!" : "Aula criada com sucesso!" });
     }
 
     setIsDialogOpen(false);
@@ -182,7 +182,7 @@ export default function Courses() {
                   }`}
                 >
                   <BookOpen className="h-4 w-4" />
-                  Cursos
+                  Cursos ({courses.length})
                 </button>
                 <button
                   onClick={() => {
@@ -197,7 +197,7 @@ export default function Courses() {
                   }`}
                 >
                   <Play className="h-4 w-4" />
-                  Aulas
+                  Aulas ({lessons.length})
                 </button>
               </div>
 

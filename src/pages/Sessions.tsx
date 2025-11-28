@@ -54,7 +54,7 @@ export default function Sessions() {
   const { sessions, loading, deleteSession } = useSessions(
     filters.courseId || filters.studyType ? filters : undefined
   );
-  const { courses } = useCourses();
+  const { courses, lessons } = useCourses();
   
   const [isStartDialogOpen, setIsStartDialogOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -64,6 +64,12 @@ export default function Sessions() {
     studyType: 'video',
     notes: '',
   });
+
+  // Combinar cursos e aulas para seleção
+  const allItems = [
+    ...courses.map(c => ({ ...c, type: 'course' })),
+    ...lessons.map(l => ({ ...l, type: 'lesson' }))
+  ];
 
   const handleStartSession = () => {
     if (!startForm.courseId) {
@@ -103,6 +109,11 @@ export default function Sessions() {
   };
 
   const activeCourses = courses.filter(c => c.status === 'active');
+  const activeLessons = lessons.filter(l => l.status === 'active');
+  const allActive = [
+    ...activeCourses.map(c => ({ ...c, type: 'course', itemType: 'Curso' })),
+    ...activeLessons.map(l => ({ ...l, type: 'lesson', itemType: 'Aula' }))
+  ];
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -159,20 +170,40 @@ export default function Sessions() {
                   </DialogHeader>
                   <div className="space-y-5 mt-4">
                     <div className="space-y-2">
-                      <Label className="text-zinc-400">Curso *</Label>
+                      <Label className="text-zinc-400">Curso ou Aula *</Label>
                       <Select
                         value={startForm.courseId}
                         onValueChange={(value) => setStartForm({ ...startForm, courseId: value })}
                       >
                         <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20">
-                          <SelectValue placeholder="Selecione um curso ativo" />
+                          <SelectValue placeholder="Selecione um curso ou aula ativa" />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
-                          {activeCourses.map((course) => (
-                            <SelectItem key={course.id} value={course.id}>
-                              {course.title}
-                            </SelectItem>
-                          ))}
+                          <div className="px-2 py-1.5">
+                            <p className="text-xs font-semibold text-zinc-400 uppercase mb-2">Cursos</p>
+                          </div>
+                          {activeCourses.length > 0 ? (
+                            activeCourses.map((course) => (
+                              <SelectItem key={course.id} value={course.id}>
+                                📚 {course.title}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-2 py-1.5 text-xs text-zinc-500">Nenhum curso ativo</div>
+                          )}
+                          
+                          <div className="px-2 py-1.5 mt-2 border-t border-white/10">
+                            <p className="text-xs font-semibold text-zinc-400 uppercase mb-2">Aulas</p>
+                          </div>
+                          {activeLessons.length > 0 ? (
+                            activeLessons.map((lesson) => (
+                              <SelectItem key={lesson.id} value={lesson.id}>
+                                ▶️ {lesson.title}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-2 py-1.5 text-xs text-zinc-500">Nenhuma aula ativa</div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -250,21 +281,41 @@ export default function Sessions() {
 
                     <div className="space-y-5">
                       <div className="space-y-2">
-                        <Label className="text-zinc-400">Curso</Label>
+                        <Label className="text-zinc-400">Curso ou Aula</Label>
                         <div className="flex gap-2">
                           <Select
                             value={filters.courseId}
                             onValueChange={(value) => setFilters({ ...filters, courseId: value })}
                           >
                             <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20 flex-1">
-                              <SelectValue placeholder="Selecionar curso..." />
+                              <SelectValue placeholder="Selecionar..." />
                             </SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
-                              {courses.map((course) => (
-                                <SelectItem key={course.id} value={course.id}>
-                                  {course.title}
-                                </SelectItem>
-                              ))}
+                              <div className="px-2 py-1.5">
+                                <p className="text-xs font-semibold text-zinc-400 uppercase mb-2">Cursos</p>
+                              </div>
+                              {courses.length > 0 ? (
+                                courses.map((course) => (
+                                  <SelectItem key={course.id} value={course.id}>
+                                    📚 {course.title}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-2 py-1.5 text-xs text-zinc-500">Nenhum curso</div>
+                              )}
+                              
+                              <div className="px-2 py-1.5 mt-2 border-t border-white/10">
+                                <p className="text-xs font-semibold text-zinc-400 uppercase mb-2">Aulas</p>
+                              </div>
+                              {lessons.length > 0 ? (
+                                lessons.map((lesson) => (
+                                  <SelectItem key={lesson.id} value={lesson.id}>
+                                    ▶️ {lesson.title}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="px-2 py-1.5 text-xs text-zinc-500">Nenhuma aula</div>
+                              )}
                             </SelectContent>
                           </Select>
                           {filters.courseId && (

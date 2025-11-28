@@ -52,10 +52,11 @@ export const useCourses = () => {
       const formatted = (data || []).map((course: any) => ({
         ...course,
         notes: course.course_notes || [],
+        type: course.type || 'course', // Garantir que sempre tem um tipo
       }));
 
       // Separar cursos e aulas
-      const coursesOnly = formatted.filter(c => c.type === 'course' || !c.type);
+      const coursesOnly = formatted.filter(c => c.type === 'course');
       const lessonsOnly = formatted.filter(c => c.type === 'lesson');
 
       setCourses(coursesOnly);
