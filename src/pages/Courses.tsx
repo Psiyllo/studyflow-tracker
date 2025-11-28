@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from "react-router-dom"; 
-import { Plus, BookOpen, ExternalLink, Edit, Trash, Sparkles, NotebookText } from 'lucide-react';
+import { Plus, BookOpen, ExternalLink, Edit, Trash, Sparkles, NotebookText, Play, Tv } from 'lucide-react';
 import { useCourses, CourseNote } from '@/hooks/useCourses'; 
 
 import {
@@ -57,15 +57,17 @@ const CourseCardSkeleton = () => (
 
 
 export default function Courses() {
-  const { courses, loading, createCourse, updateCourse, deleteCourse } = useCourses();
+  const { courses, lessons, loading, createCourse, updateCourse, deleteCourse } = useCourses();
   const navigate = useNavigate(); 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'course' | 'lesson'>('course');
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: '',
     platform: '',
     url: '',
     status: 'active' as 'active' | 'paused' | 'completed',
+    type: 'course' as 'course' | 'lesson',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,12 +78,20 @@ export default function Courses() {
       return;
     }
 
+    const submitData = {
+      title: formData.title,
+      platform: formData.type === 'course' ? formData.platform : null,
+      url: formData.url,
+      status: formData.status,
+      type: formData.type,
+    };
+
     if (editingCourse) {
-      await updateCourse(editingCourse.id, formData);
-      toast({ title: "Curso atualizado com sucesso!" });
+      await updateCourse(editingCourse.id, submitData);
+      toast({ title: formData.type === 'course' ? "Curso atualizado com sucesso!" : "Aula atualizada com sucesso!" });
     } else {
-      await createCourse(formData);
-      toast({ title: "Curso criado com sucesso!" });
+      await createCourse(submitData as any);
+      toast({ title: formData.type === 'course' ? "Curso criado com sucesso!" : "Aula criada com sucesso!" });
     }
 
     setIsDialogOpen(false);
@@ -90,19 +100,21 @@ export default function Courses() {
 
   const handleEdit = (course: any) => {
     setEditingCourse(course);
+    setActiveTab(course.type === 'lesson' ? 'lesson' : 'course');
     setFormData({
       title: course.title,
       platform: course.platform || '',
       url: course.url || '',
       status: course.status,
+      type: course.type || 'course',
     });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este curso?')) {
+  const handleDelete = async (id: string, type: string) => {
+    if (confirm(`Tem certeza que deseja excluir este ${type === 'lesson' ? 'aula' : 'curso'}?`)) {
       await deleteCourse(id);
-      toast({ title: "Curso excluído!" });
+      toast({ title: `${type === 'lesson' ? 'Aula' : 'Curso'} excluído!` });
     }
   };
 
@@ -112,6 +124,7 @@ export default function Courses() {
       platform: '',
       url: '',
       status: 'active',
+      type: 'course',
     });
     setEditingCourse(null);
   };
@@ -146,97 +159,158 @@ export default function Courses() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
             <div>
               <h1 className="text-4xl font-bold tracking-tight mb-2 bg-gradient-to-r from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent">
-                Meus Cursos
+                Meus Cursos & Aulas
               </h1>
               <p className="text-zinc-400 text-lg">
-                Gerencie sua jornada de aprendizado.
+                Gerencie sua jornada de aprendizado
               </p>
             </div>
 
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <button className="group relative inline-flex items-center justify-center gap-2 px-6 py-3 font-medium text-white transition-all duration-300 bg-violet-600/20 border border-violet-500/50 rounded-xl hover:bg-violet-600/30 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:-translate-y-0.5">
-                  <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
-                  <span>Novo Curso</span>
+            {/* Toggle Abas */}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-2 bg-zinc-800/50 rounded-lg p-1 border border-white/5">
+                <button
+                  onClick={() => {
+                    setActiveTab('course');
+                    setEditingCourse(null);
+                    setFormData({ ...formData, type: 'course' });
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all ${
+                    activeTab === 'course'
+                      ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Cursos
                 </button>
-              </DialogTrigger>
+                <button
+                  onClick={() => {
+                    setActiveTab('lesson');
+                    setEditingCourse(null);
+                    setFormData({ ...formData, type: 'lesson' });
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-medium transition-all ${
+                    activeTab === 'lesson'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/30'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <Play className="h-4 w-4" />
+                  Aulas
+                </button>
+              </div>
 
-              <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100 sm:rounded-2xl">
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold">
-                    {editingCourse ? "Editar Curso" : "Adicionar Novo Curso"}
-                  </DialogTitle>
-                </DialogHeader>
+              <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <button className="group relative inline-flex items-center justify-center gap-2 px-6 py-3 font-medium text-white transition-all duration-300 bg-violet-600/20 border border-violet-500/50 rounded-xl hover:bg-violet-600/30 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] hover:-translate-y-0.5">
+                    <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
+                    <span>{activeTab === 'course' ? 'Novo Curso' : 'Nova Aula'}</span>
+                  </button>
+                </DialogTrigger>
 
-                <form onSubmit={handleSubmit} className="space-y-5 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title" className="text-zinc-400">Título do Curso</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Ex: Spring Boot Masterclass"
-                      required
-                      className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
-                    />
-                  </div>
+                <DialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100 sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl font-bold">
+                      {editingCourse ? `Editar ${activeTab === 'lesson' ? 'Aula' : 'Curso'}` : `Adicionar ${activeTab === 'lesson' ? 'Nova Aula' : 'Novo Curso'}`}
+                    </DialogTitle>
+                  </DialogHeader>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <form onSubmit={handleSubmit} className="space-y-5 mt-4">
                     <div className="space-y-2">
-                      <Label htmlFor="platform" className="text-zinc-400">Plataforma</Label>
+                      <Label htmlFor="title" className="text-zinc-400">
+                        Título {activeTab === 'lesson' ? 'da Aula' : 'do Curso'}
+                      </Label>
                       <Input
-                        id="platform"
-                        value={formData.platform}
-                        onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
-                        placeholder="Ex: Udemy"
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder={activeTab === 'lesson' ? "Ex: Arrays em JavaScript" : "Ex: Spring Boot Masterclass"}
+                        required
                         className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
                       />
                     </div>
 
+                    {activeTab === 'course' ? (
+                      // FORMULÁRIO PARA CURSOS
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="platform" className="text-zinc-400">Plataforma</Label>
+                          <Input
+                            id="platform"
+                            value={formData.platform}
+                            onChange={(e) => setFormData({ ...formData, platform: e.target.value })}
+                            placeholder="Ex: Udemy"
+                            className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="status" className="text-zinc-400">Status</Label>
+                          <Select
+                            value={formData.status}
+                            onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                          >
+                            <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
+                              <SelectItem value="active">Em Andamento</SelectItem>
+                              <SelectItem value="paused">Pausado</SelectItem>
+                              <SelectItem value="completed">Concluído</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    ) : (
+                      // FORMULÁRIO PARA AULAS
+                      <div className="space-y-2">
+                        <Label htmlFor="status" className="text-zinc-400">Status</Label>
+                        <Select
+                          value={formData.status}
+                          onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+                        >
+                          <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
+                            <SelectItem value="active">Não Assistida</SelectItem>
+                            <SelectItem value="paused">Assistindo</SelectItem>
+                            <SelectItem value="completed">Assistida</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
-                      <Label htmlFor="status" className="text-zinc-400">Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value: any) => setFormData({ ...formData, status: value })}
-                      >
-                        <SelectTrigger className="bg-zinc-900/50 border-white/10 text-zinc-200 focus:ring-violet-500/20">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
-                          <SelectItem value="active">Em Andamento</SelectItem>
-                          <SelectItem value="paused">Pausado</SelectItem>
-                          <SelectItem value="completed">Concluído</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="url" className="text-zinc-400">
+                        Link {activeTab === 'lesson' ? 'da Aula (URL)' : 'do Curso (URL)'}
+                      </Label>
+                      <Input
+                        id="url"
+                        type="url"
+                        value={formData.url}
+                        onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                        placeholder={activeTab === 'lesson' ? "https://youtube.com/..." : "https://..."}
+                        className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
+                      />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="url" className="text-zinc-400">Link do Curso (URL)</Label>
-                    <Input
-                      id="url"
-                      type="url"
-                      value={formData.url}
-                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                      placeholder="https://..."
-                      className="bg-zinc-900/50 border-white/10 focus:border-violet-500/50 focus:ring-violet-500/20 placeholder:text-zinc-600"
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <Button
-                      type="submit"
-                      className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-violet-900/20"
-                    >
-                      {editingCourse ? "Salvar Alterações" : "Criar Curso"}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <div className="pt-2">
+                      <Button
+                        type="submit"
+                        className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-6 rounded-xl shadow-lg shadow-violet-900/20"
+                      >
+                        {editingCourse ? "Salvar Alterações" : `Criar ${activeTab === 'lesson' ? 'Aula' : 'Curso'}`}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           {loading ? (
@@ -246,14 +320,22 @@ export default function Courses() {
               <CourseCardSkeleton />
               <CourseCardSkeleton />
             </div>
-          ) : courses.length === 0 ? (
+          ) : (activeTab === 'course' ? courses : lessons).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-zinc-900/20 backdrop-blur-sm">
               <div className="p-4 bg-zinc-800/50 rounded-full mb-4 ring-1 ring-white/10">
-                <BookOpen className="h-8 w-8 text-zinc-400" />
+                {activeTab === 'course' ? (
+                  <BookOpen className="h-8 w-8 text-zinc-400" />
+                ) : (
+                  <Play className="h-8 w-8 text-blue-400" />
+                )}
               </div>
-              <h3 className="text-xl font-semibold mb-2 text-white">Sua biblioteca está vazia</h3>
+              <h3 className="text-xl font-semibold mb-2 text-white">
+                {activeTab === 'course' ? 'Nenhum curso registrado' : 'Nenhuma aula registrada'}
+              </h3>
               <p className="text-zinc-400 mb-6 max-w-sm">
-                Adicione seu primeiro curso para começar a acompanhar seu progresso.
+                {activeTab === 'course'
+                  ? 'Adicione seu primeiro curso para começar a acompanhar seu progresso.'
+                  : 'Adicione sua primeira aula para manter rastreio do seu aprendizado rápido.'}
               </p>
               <Button
                 onClick={() => setIsDialogOpen(true)}
@@ -265,21 +347,46 @@ export default function Courses() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => {
-                const statusInfo = statusConfig[course.status as keyof typeof statusConfig] || statusConfig.active;
-                const courseNotes = course.notes || []; 
+              {(activeTab === 'course' ? courses : lessons).map((item) => {
+                const statusInfo = statusConfig[item.status as keyof typeof statusConfig] || statusConfig.active;
+                const itemNotes = item.notes || [];
+                const isLesson = item.type === 'lesson';
 
                 return (
                   <div
-                    key={course.id}
-                    className="group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:border-violet-500/30 hover:bg-zinc-900/60 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50"
+                    key={item.id}
+                    className={`group relative bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 ${
+                      isLesson
+                        ? 'hover:border-blue-500/30 hover:bg-zinc-900/60'
+                        : 'hover:border-violet-500/30 hover:bg-zinc-900/60'
+                    }`}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+                    <div className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none ${
+                      isLesson
+                        ? 'from-blue-500/5 to-transparent'
+                        : 'from-violet-500/5 to-transparent'
+                    }`} />
 
                     <div className="relative z-10 flex flex-col h-full">
                       <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-zinc-800/50 border border-white/5 group-hover:border-violet-500/20 group-hover:bg-violet-500/10 transition-colors">
-                          <BookOpen className="h-6 w-6 text-zinc-400 group-hover:text-violet-400 transition-colors" />
+                        <div className={`p-3 rounded-xl border transition-colors ${
+                          isLesson
+                            ? 'bg-zinc-800/50 border-white/5 group-hover:border-blue-500/20 group-hover:bg-blue-500/10'
+                            : 'bg-zinc-800/50 border-white/5 group-hover:border-violet-500/20 group-hover:bg-violet-500/10'
+                        }`}>
+                          {isLesson ? (
+                            <Play className={`h-6 w-6 ${
+                              isLesson
+                                ? 'text-blue-400 group-hover:text-blue-300'
+                                : 'text-zinc-400 group-hover:text-violet-400'
+                            } transition-colors`} />
+                          ) : (
+                            <BookOpen className={`h-6 w-6 ${
+                              isLesson
+                                ? 'text-blue-400 group-hover:text-blue-300'
+                                : 'text-zinc-400 group-hover:text-violet-400'
+                            } transition-colors`} />
+                          )}
                         </div>
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${statusInfo.classes}`}>
                           {statusInfo.label}
@@ -288,43 +395,43 @@ export default function Courses() {
 
                       <div className="mb-6 flex-1">
                         <h3 className="text-xl font-bold text-zinc-100 mb-1 line-clamp-2 group-hover:text-white transition-colors">
-                          {course.title}
+                          {item.title}
                         </h3>
-                        {course.platform && (
+                        {!isLesson && item.platform && (
                           <p className="text-sm text-zinc-500 flex items-center gap-1 mb-4">
                             <Sparkles className="w-3 h-3 text-zinc-600" />
-                            {course.platform}
+                            {item.platform}
                           </p>
                         )}
 
-                        {courseNotes.length > 0 && (
+                        {itemNotes.length > 0 && (
                           <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                             <p className="text-xs font-medium text-zinc-400 mb-1 flex items-center gap-1">
                               <NotebookText className='h-3 w-3' />
-                              Anotações ({courseNotes.length})
+                              Anotações ({itemNotes.length})
                             </p>
-                            {courseNotes.slice(0, 3).map((note: CourseNote) => (
+                            {itemNotes.slice(0, 3).map((note: CourseNote) => (
                               <CourseNoteItem
                                 key={note.id}
                                 title={note.title}
                                 description={note.description}
                               />
                             ))}
-                            {courseNotes.length > 3 && (
+                            {itemNotes.length > 3 && (
                               <p className="text-xs text-zinc-500 pt-1">
-                                + {courseNotes.length - 3} anotações...
+                                + {itemNotes.length - 3} anotações...
                               </p>
                             )}
                           </div>
                         )}
                       </div>
                       <div className="pt-4 border-t border-white/5 flex items-center gap-2 mt-auto">
-                        {course.url && (
+                        {item.url && (
                           <Button
                             size="sm"
                             variant="ghost"
                             className="flex-1 bg-white/5 hover:bg-white/10 hover:text-white text-zinc-300 border border-white/5"
-                            onClick={() => window.open(course.url!, '_blank')}
+                            onClick={() => window.open(item.url!, '_blank')}
                           >
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Acessar
@@ -336,26 +443,28 @@ export default function Courses() {
                             size="icon"
                             variant="ghost"
                             className="h-9 w-9 text-zinc-400 hover:text-white hover:bg-white/10"
-                            onClick={() => handleEdit(course)}
+                            onClick={() => handleEdit(item)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
 
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            title="Ver Anotações"
-                            className="h-9 w-9 text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10"
-                            onClick={() => navigate(`/courses/${course.id}/notes`)}
-                          >
-                            <NotebookText className="h-4 w-4" />
-                          </Button>
+                          {!isLesson && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              title="Ver Anotações"
+                              className="h-9 w-9 text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10"
+                              onClick={() => navigate(`/courses/${item.id}/notes`)}
+                            >
+                              <NotebookText className="h-4 w-4" />
+                            </Button>
+                          )}
 
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-9 w-9 text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
-                            onClick={() => handleDelete(course.id)}
+                            onClick={() => handleDelete(item.id, item.type)}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>

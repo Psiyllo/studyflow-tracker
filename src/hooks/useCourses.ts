@@ -17,6 +17,7 @@ export interface Course {
   platform: string | null;
   url: string | null;
   status: "active" | "paused" | "completed";
+  type: "course" | "lesson";
   created_at: string;
   notes?: CourseNote[];
 }
@@ -25,11 +26,13 @@ export interface Course {
 export const useCourses = () => {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [lessons, setLessons] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCourses = async () => {
     if (!user) {
       setCourses([]);
+      setLessons([]);
       setLoading(false);
       return;
     }
@@ -38,9 +41,9 @@ export const useCourses = () => {
       const { data, error } = await supabase
         .from("courses")
         .select(`
-          *,
-          course_notes (*)
-        `)
+          *,
+          course_notes (*)
+        `)
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -51,15 +54,18 @@ export const useCourses = () => {
         notes: course.course_notes || [],
       }));
 
-      setCourses(formatted);
+      // Separar cursos e aulas
+      const coursesOnly = formatted.filter(c => c.type === 'course' || !c.type);
+      const lessonsOnly = formatted.filter(c => c.type === 'lesson');
+
+      setCourses(coursesOnly);
+      setLessons(lessonsOnly);
     } catch (error) {
       console.error("Error fetching courses:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
+  };  useEffect(() => {
     fetchCourses();
   }, [user?.id]);
 
@@ -118,6 +124,7 @@ export const useCourses = () => {
 
   return {
     courses,
+    lessons,
     loading,
     createCourse,
     updateCourse,

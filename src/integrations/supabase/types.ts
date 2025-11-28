@@ -19,6 +19,7 @@ export type Database = {
           platform: string | null
           status: string | null
           title: string
+          type: string | null
           url: string | null
           user_id: string
         }
@@ -28,6 +29,7 @@ export type Database = {
           platform?: string | null
           status?: string | null
           title: string
+          type?: string | null
           url?: string | null
           user_id: string
         }
@@ -37,6 +39,7 @@ export type Database = {
           platform?: string | null
           status?: string | null
           title?: string
+          type?: string | null
           url?: string | null
           user_id?: string
         }
