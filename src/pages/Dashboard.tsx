@@ -1,60 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Clock, Target, Flame, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, parseISO, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns'; 
+import { format, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns'; 
 import { ptBR } from 'date-fns/locale';
 import { ActivityChart } from '@/components/dashboard/ActivityChart';
 import { TopicDistribution } from '@/components/dashboard/TopicDistribution';
 import { FocusRadar } from '@/components/dashboard/FocusRadar';
-
-// Interfaces for data structures
-interface ChartDataPoint {
-  date: string;
-  fullDate: string;
-  video: number;
-  reading: number;
-  coding: number;
-  review: number;
-  other: number;
-  total: number;
-  videoSeconds: number;
-  readingSeconds: number;
-  codingSeconds: number;
-  reviewSeconds: number;
-  otherSeconds: number;
-  totalSeconds: number;
-}
-
-interface DistributionDataPoint {
-  name: string;
-  value: number;
-}
-
-interface RadarDataPoint {
-  subject: string;
-  A: number;
-  fullMark: number;
-}
-
-interface Stats {
-  todaySeconds: number;
-  dailyGoal: number;
-  weekSeconds: number;
-  streak: number;
-  activeCourses: number;
-}
-
-interface GlobalTotals {
-  video: number;
-  reading: number;
-  coding: number;
-  review: number;
-  other: number;
-  [key: string]: number;
-}
+import { useDashboardStats } from '@/hooks/useDashboardStats';
+import { useDashboardCharts, ViewMode } from '@/hooks/useDashboardCharts';
 
 const SkeletonCard = () => (
     <div className="h-[140px] bg-zinc-800/50 rounded-2xl animate-pulse border border-white/5" />
@@ -63,21 +18,13 @@ const SkeletonCard = () => (
 export default function Dashboard() {
   const { user } = useAuth();
   
-  const [stats, setStats] = useState<Stats>({
-    todaySeconds: 0,
-    dailyGoal: 120,
-    weekSeconds: 0,
-    streak: 0,
-    activeCourses: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'week' | 'month' | 'year'>('month');
+  const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
-  
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]); 
-  const [distributionData, setDistributionData] = useState<DistributionDataPoint[]>([]); 
-  const [radarData, setRadarData] = useState<RadarDataPoint[]>([]); 
+
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: chartsData, isLoading: chartsLoading } = useDashboardCharts(viewMode, currentDate);
+
+  const loading = statsLoading || chartsLoading;
 
   const formatDuration = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -87,159 +34,6 @@ export default function Dashboard() {
     if (hrs > 0) return `${hrs}h ${mins}m`; 
     if (mins > 0) return `${mins}m ${secs}s`;
     return `${secs}s`;
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchStats();
-      fetchChartData();
-    }
-  }, [user, viewMode, currentDate]);
-
-  const fetchStats = async () => {
-    if (!user) return;
-    try {
-      const { data: profile } = await supabase.from('profiles').select('daily_goal_minutes').eq('id', user.id).single();
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      
-      const { data: todaySessions } = await supabase.from('study_sessions').select('duration_seconds').eq('user_id', user.id).gte('start_time', today.toISOString());
-      const todaySeconds = todaySessions?.reduce((acc, s) => acc + (s.duration_seconds || 0), 0) || 0;
-
-      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0, 0, 0, 0);
-      const { data: weekSessions } = await supabase.from('study_sessions').select('duration_seconds').eq('user_id', user.id).gte('start_time', weekAgo.toISOString());
-      const weekSeconds = weekSessions?.reduce((acc, s) => acc + (s.duration_seconds || 0), 0) || 0;
-
-      const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(30);
-      
-      let streak = 0;
-      const goalMinutes = profile?.daily_goal_minutes || 120;
-      if (dailyStats) {
-        for (let i = 0; i < dailyStats.length; i++) {
-          // Note: daily_stats view might need update if it sums minutes. Assuming it still returns minutes for now or needs update.
-          // If daily_stats is a view based on study_sessions, it might need to be updated in DB to sum seconds / 60.
-          // For now, assuming total_minutes is correct in the view or we handle it.
-          if ((dailyStats[i].total_minutes || 0) >= goalMinutes) streak++;
-          else break;
-        }
-      }
-
-      const { count: coursesCount } = await supabase.from('courses').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'active');
-
-      setStats({ todaySeconds, dailyGoal: goalMinutes, weekSeconds, streak, activeCourses: coursesCount || 0 });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const fetchChartData = async () => {
-    if (!user) return;
-    setLoading(true);
-
-    try {
-      let startDate: Date;
-      let endDate: Date;
-
-      if (viewMode === 'week') {
-        startDate = startOfWeek(currentDate);
-        endDate = endOfWeek(currentDate);
-      } else if (viewMode === 'month') {
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-      } else {
-        startDate = startOfYear(currentDate);
-        endDate = endOfYear(currentDate);
-      }
-
-      setDateRange({ start: startDate, end: endDate });
-
-      const { data: sessions } = await supabase
-        .from('study_sessions')
-        .select('start_time, duration_seconds, study_type')
-        .eq('user_id', user.id)
-        .gte('start_time', startDate.toISOString())
-        .lte('start_time', endDate.toISOString());
-
-      const globalTotals: GlobalTotals = { video: 0, reading: 0, coding: 0, review: 0, other: 0 };
-
-      const processInterval = (dates: Date[], formatStr: string, isMonthly: boolean) => {
-        const dataMap: { [key: string]: GlobalTotals } = {};
-        dates.forEach(d => {
-            const key = format(d, isMonthly ? 'MMM' : 'yyyy-MM-dd');
-            dataMap[key] = { video: 0, reading: 0, coding: 0, review: 0, other: 0 };
-        });
-
-        sessions?.forEach(session => {
-            const d = parseISO(session.start_time);
-            const key = format(d, isMonthly ? 'MMM' : 'yyyy-MM-dd');
-            if (dataMap[key]) {
-                const duration = session.duration_seconds || 0;
-                const type = session.study_type || 'other';
-                // Type guard or fallback
-                if (type in dataMap[key]) {
-                    dataMap[key][type] += duration;
-                    globalTotals[type] += duration; 
-                } else {
-                     dataMap[key]['other'] += duration;
-                     globalTotals['other'] += duration;
-                }
-            }
-        });
-
-        return dates.map(d => {
-            const key = format(d, isMonthly ? 'MMM' : 'yyyy-MM-dd');
-            const data = dataMap[key];
-            const totalSec = data.video + data.reading + data.coding + data.review + data.other;
-
-            return {
-                date: format(d, isMonthly ? 'MMM' : 'dd/MM'),
-                fullDate: key,
-                video: Number((data.video / 60).toFixed(2)),
-                reading: Number((data.reading / 60).toFixed(2)),
-                coding: Number((data.coding / 60).toFixed(2)),
-                review: Number((data.review / 60).toFixed(2)),
-                other: Number((data.other / 60).toFixed(2)),
-                total: Number((totalSec / 60).toFixed(2)),
-                
-                videoSeconds: data.video,
-                readingSeconds: data.reading,
-                codingSeconds: data.coding,
-                reviewSeconds: data.review,
-                otherSeconds: data.other,
-                totalSeconds: totalSec,
-            };
-        });
-      };
-
-      let timeline;
-      if (viewMode === 'year') {
-        const months = eachMonthOfInterval({ start: startDate, end: endDate });
-        timeline = processInterval(months, 'MMM', true);
-      } else {
-        const days = eachDayOfInterval({ start: startDate, end: endDate });
-        timeline = processInterval(days, 'yyyy-MM-dd', false);
-      }
-      setChartData(timeline);
-
-      const distData = Object.keys(globalTotals).map(key => ({
-        name: key,
-        value: globalTotals[key]
-      })).filter(d => d.value > 0);
-      setDistributionData(distData);
-
-      const radar = [
-        { subject: 'Vídeo', A: Math.round(globalTotals.video / 60), fullMark: 150 },
-        { subject: 'Leitura', A: Math.round(globalTotals.reading / 60), fullMark: 150 },
-        { subject: 'Prática', A: Math.round(globalTotals.coding / 60), fullMark: 150 },
-        { subject: 'Revisão', A: Math.round(globalTotals.review / 60), fullMark: 150 },
-        { subject: 'Outro', A: Math.round(globalTotals.other / 60), fullMark: 150 },
-      ];
-      setRadarData(radar);
-
-    } catch (error) {
-      console.error('Error fetching chart data:', error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handlePrevious = () => {
@@ -254,7 +48,9 @@ export default function Dashboard() {
     else setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), currentDate.getDate()));
   };
 
-  const progressPercentage = Math.min(((stats.todaySeconds || 0) / 60 / (stats.dailyGoal || 1)) * 100, 100);
+  const progressPercentage = Math.min(((stats?.todaySeconds || 0) / 60 / (stats?.dailyGoal || 1)) * 100, 100);
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
@@ -293,7 +89,7 @@ export default function Dashboard() {
                             <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full border border-emerald-500/20">Hoje</span>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-3xl font-bold text-white tracking-tight">{formatDuration(stats.todaySeconds || 0)}</h3>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{formatDuration(stats?.todaySeconds || 0)}</h3>
                             <p className="text-sm text-zinc-400">{progressPercentage.toFixed(0)}% da meta diária</p>
                         </div>
                         <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl group-hover:bg-violet-500/20 transition-all"></div>
@@ -306,7 +102,7 @@ export default function Dashboard() {
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats.dailyGoal} <span className="text-sm font-normal text-zinc-500">min</span></h3>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats?.dailyGoal} <span className="text-sm font-normal text-zinc-500">min</span></h3>
                             <p className="text-sm text-zinc-400">Objetivo diário</p>
                         </div>
                     </div>
@@ -316,12 +112,12 @@ export default function Dashboard() {
                             <div className="p-3 bg-zinc-800/50 rounded-xl text-zinc-400 group-hover:text-orange-400 group-hover:bg-orange-500/10 transition-colors">
                                 <Flame className="w-6 h-6" />
                             </div>
-                            {stats.streak > 0 && (
+                            {(stats?.streak || 0) > 0 && (
                                 <span className="text-xs font-medium text-orange-400 bg-orange-500/10 px-2 py-1 rounded-full border border-orange-500/20 flex items-center gap-1">On Fire</span>
                             )}
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats.streak} <span className="text-sm font-normal text-zinc-500">dias</span></h3>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats?.streak} <span className="text-sm font-normal text-zinc-500">dias</span></h3>
                             <p className="text-sm text-zinc-400">Sequência atual</p>
                         </div>
                     </div>
@@ -333,7 +129,7 @@ export default function Dashboard() {
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats.activeCourses}</h3>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats?.activeCourses}</h3>
                             <p className="text-sm text-zinc-400">Cursos em andamento</p>
                         </div>
                     </div>
@@ -355,7 +151,7 @@ export default function Dashboard() {
                             </div>
                             <div className="text-right">
                                 <span className="text-3xl font-mono font-bold text-white tracking-tighter">
-                                    {formatDuration(stats.todaySeconds || 0)}<span className="text-zinc-500 text-lg">/{formatDuration(stats.dailyGoal * 60)}</span>
+                                    {formatDuration(stats?.todaySeconds || 0)}<span className="text-zinc-500 text-lg">/{formatDuration((stats?.dailyGoal || 0) * 60)}</span>
                                 </span>
                             </div>
                         </div>
@@ -382,7 +178,7 @@ export default function Dashboard() {
                 <div>
                     <h3 className="text-2xl font-bold text-white">Análise Detalhada</h3>
                     <p className="text-sm text-zinc-400">
-                        {format(dateRange.start, "d 'de' MMM", { locale: ptBR })} - {format(dateRange.end, "d 'de' MMM, yyyy", { locale: ptBR })}
+                        {chartsData?.dateRange && format(chartsData.dateRange.start, "d 'de' MMM", { locale: ptBR })} - {chartsData?.dateRange && format(chartsData.dateRange.end, "d 'de' MMM, yyyy", { locale: ptBR })}
                     </p>
                 </div>
                 
@@ -417,15 +213,15 @@ export default function Dashboard() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-3 h-[400px]">
-                        <ActivityChart data={chartData} formatDuration={formatDuration} />
+                        <ActivityChart data={chartsData?.chartData || []} formatDuration={formatDuration} />
                     </div>
 
                     <div className="lg:col-span-1 h-[350px]">
-                        <FocusRadar data={radarData} />
+                        <FocusRadar data={chartsData?.radarData || []} />
                     </div>
 
                     <div className="lg:col-span-1 h-[350px]">
-                        <TopicDistribution data={distributionData} formatDuration={formatDuration} />
+                        <TopicDistribution data={chartsData?.distributionData || []} formatDuration={formatDuration} />
                     </div>
 
                     <div className="lg:col-span-1 h-[350px] bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 flex flex-col justify-center gap-4">
@@ -433,7 +229,7 @@ export default function Dashboard() {
                             <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1">Total do Período</p>
                             <p className="text-2xl font-bold text-violet-400">
                                 {(() => {
-                                    const totalSeconds = chartData.reduce((acc, day) => acc + (day.totalSeconds || 0), 0);
+                                    const totalSeconds = chartsData?.chartData.reduce((acc, day) => acc + (day.totalSeconds || 0), 0) || 0;
                                     return formatDuration(totalSeconds);
                                 })()}
                             </p>
@@ -442,8 +238,8 @@ export default function Dashboard() {
                             <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1">Média Diária</p>
                             <p className="text-2xl font-bold text-blue-400">
                                 {(() => {
-                                    const totalSeconds = chartData.reduce((acc, day) => acc + (day.totalSeconds || 0), 0);
-                                    const avgSeconds = chartData.length ? Math.round(totalSeconds / chartData.length) : 0;
+                                    const totalSeconds = chartsData?.chartData.reduce((acc, day) => acc + (day.totalSeconds || 0), 0) || 0;
+                                    const avgSeconds = chartsData?.chartData.length ? Math.round(totalSeconds / chartsData.chartData.length) : 0;
                                     return formatDuration(avgSeconds);
                                 })()}
                             </p>
@@ -451,7 +247,7 @@ export default function Dashboard() {
                         <div className="bg-zinc-800/30 border border-white/5 rounded-xl p-4">
                             <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1">Dias Produtivos</p>
                             <p className="text-2xl font-bold text-emerald-400">
-                                {chartData.filter(day => day.totalSeconds > 0).length} <span className="text-sm font-normal text-zinc-500">dias</span>
+                                {chartsData?.chartData.filter(day => day.totalSeconds > 0).length || 0} <span className="text-sm font-normal text-zinc-500">dias</span>
                             </p>
                         </div>
                     </div>
