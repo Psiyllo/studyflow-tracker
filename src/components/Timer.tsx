@@ -1,4 +1,4 @@
-import { Play, Pause, Square } from 'lucide-react';
+import { Play, Pause, Square, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useTimer } from '@/contexts/TimerContext';
@@ -8,6 +8,7 @@ export const Timer = () => {
     isRunning, 
     isPaused, 
     elapsedSeconds, 
+    sessionData,
     pauseTimer, 
     resumeTimer, 
     finishSession 
@@ -22,9 +23,17 @@ export const Timer = () => {
 
   if (!isRunning) return null;
 
+  const isResumed = sessionData?.resumeFromSession;
+
   return (
     <Card className="p-8 bg-gradient-to-br from-primary/10 to-success/10 border-primary/20">
       <div className="text-center space-y-6">
+        {isResumed && (
+          <div className="flex items-center justify-center gap-2 text-sm text-blue-400">
+            <RotateCcw className="h-4 w-4" />
+            <span>Sessão retomada</span>
+          </div>
+        )}
         <div className="text-6xl font-bold tabular-nums tracking-tight text-foreground">
           {formatTime(elapsedSeconds)}
         </div>

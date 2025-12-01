@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Timer } from '@/components/Timer'; 
 import { Button } from '@/components/ui/button';
-import { Play, Filter, Clock, BookOpen, ChevronRight, Trash2, X } from 'lucide-react';
+import { Play, Filter, Clock, BookOpen, ChevronRight, Trash2, X, RotateCcw } from 'lucide-react';
 import { useTimer } from '@/contexts/TimerContext';
 import { useSessions } from '@/hooks/useSessions';
 import { useCourses } from '@/hooks/useCourses';
@@ -65,6 +65,32 @@ export default function Sessions() {
     notes: '',
   });
 
+  const handleResumeSession = (session: any) => {
+    // Inicia o timer com os dados da sessão anterior
+    // duration_minutes agora contém os segundos totais
+    const elapsedSeconds = session.duration_minutes;
+    const hours = Math.floor(elapsedSeconds / 3600);
+    const mins = Math.floor((elapsedSeconds % 3600) / 60);
+    const secs = elapsedSeconds % 60;
+    
+    startTimer({
+      courseId: session.course_id,
+      studyType: session.study_type,
+      notes: session.notes,
+      resumeFromSession: session.id,
+      resumeFromDuration: elapsedSeconds,
+    });
+
+    const timeStr = hours > 0 
+      ? `${hours}h ${mins}m ${secs}s` 
+      : `${mins}m ${secs}s`;
+
+    toast({
+      title: "Sessão retomada!",
+      description: `Continuando de onde você parou (${timeStr}).`,
+    });
+  };
+
   // Combinar cursos e aulas para seleção
   const allItems = [
     ...courses.map(c => ({ ...c, type: 'course' })),
@@ -114,6 +140,20 @@ export default function Sessions() {
     ...activeCourses.map(c => ({ ...c, type: 'course', itemType: 'Curso' })),
     ...activeLessons.map(l => ({ ...l, type: 'lesson', itemType: 'Aula' }))
   ];
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m ${secs}s`;
+    } else if (mins > 0) {
+      return `${mins}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -423,43 +463,53 @@ export default function Sessions() {
                         
                         <div className="flex items-center gap-4 pl-4 flex-shrink-0">
                           <div className="text-right">
-                            <div className="text-2xl font-mono font-bold text-violet-400 tracking-tighter">
-                              {session.duration_minutes}
+                            <div className="text-lg font-mono font-bold text-violet-400 tracking-tighter">
+                              {formatDuration(session.duration_minutes)}
                             </div>
-                            <div className="text-xs text-zinc-500 uppercase font-medium">minutos</div>
+                            <div className="text-xs text-zinc-500 uppercase font-medium">tempo</div>
                           </div>
 
-                          <AlertDialog open={sessionToDelete === session.id} onOpenChange={(open) => {
-                            if (!open) setSessionToDelete(null);
-                          }}>
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => setSessionToDelete(session.id)}
-                              className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                              title="Deletar sessão"
+                              onClick={() => handleResumeSession(session)}
+                              className="p-2 rounded-lg text-zinc-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                              title="Retomar sessão"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <RotateCcw className="h-4 w-4" />
                             </button>
 
-                            <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100">
-                              <AlertDialogHeader>
-                                <AlertDialogTitle className="text-white">Deletar Sessão</AlertDialogTitle>
-                                <AlertDialogDescription className="text-zinc-400">
-                                  Tem certeza que deseja deletar esta sessão? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <div className="flex gap-3">
-                                <AlertDialogCancel className="bg-zinc-900 border-white/10 text-white hover:bg-zinc-800">
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteSession(session.id)}
-                                  className="bg-red-600 hover:bg-red-700 text-white"
-                                >
-                                  Deletar
-                                </AlertDialogAction>
-                              </div>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                            <AlertDialog open={sessionToDelete === session.id} onOpenChange={(open) => {
+                              if (!open) setSessionToDelete(null);
+                            }}>
+                              <button
+                                onClick={() => setSessionToDelete(session.id)}
+                                className="p-2 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                                title="Deletar sessão"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+
+                              <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle className="text-white">Deletar Sessão</AlertDialogTitle>
+                                  <AlertDialogDescription className="text-zinc-400">
+                                    Tem certeza que deseja deletar esta sessão? Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <div className="flex gap-3">
+                                  <AlertDialogCancel className="bg-zinc-900 border-white/10 text-white hover:bg-zinc-800">
+                                    Cancelar
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteSession(session.id)}
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    Deletar
+                                  </AlertDialogAction>
+                                </div>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </div>
                       </div>
                     </div>

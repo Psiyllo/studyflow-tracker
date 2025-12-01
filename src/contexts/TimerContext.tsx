@@ -8,6 +8,8 @@ interface SessionData {
   moduleId?: string;
   studyType: string;
   notes?: string;
+  resumeFromSession?: string;
+  resumeFromDuration?: number;
 }
 
 interface TimerContextType {
@@ -80,7 +82,8 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     setSessionData(data);
     setIsRunning(true);
     setIsPaused(false);
-    setElapsedSeconds(0);
+    // Se estiver retomando, carrega o tempo anterior; senão, começa do zero
+    setElapsedSeconds(data.resumeFromDuration ? data.resumeFromDuration * 60 : 0);
     setStartTime(new Date());
   };
 
@@ -97,6 +100,10 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
 
     const endTime = new Date();
     const durationMinutes = Math.floor(elapsedSeconds / 60);
+    const totalSeconds = elapsedSeconds; // Guardar segundos totais
+    
+    // Se temos segundos que não formam um minuto completo, adicionar ao minuto
+    const displayMinutes = durationMinutes + (elapsedSeconds % 60 > 0 ? 1 : 0);
 
     try {
       const { error } = await supabase.from('study_sessions').insert({
@@ -105,16 +112,23 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
         module_id: sessionData.moduleId || null,
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
-        duration_minutes: durationMinutes,
+        duration_minutes: totalSeconds, // Armazena segundos totais como número
         study_type: sessionData.studyType,
         notes: sessionData.notes || null,
       });
 
       if (error) throw error;
 
+      const hours = Math.floor(totalSeconds / 3600);
+      const mins = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      const timeStr = hours > 0 
+        ? `${hours}h ${mins}m ${secs}s` 
+        : `${mins}m ${secs}s`;
+
       toast({
         title: "Sessão finalizada!",
-        description: `Você estudou por ${durationMinutes} minutos.`,
+        description: `Você estudou por ${timeStr}.`,
       });
 
       resetTimer();
