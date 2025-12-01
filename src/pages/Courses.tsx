@@ -12,6 +12,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -60,6 +69,7 @@ export default function Courses() {
   const { courses, lessons, loading, createCourse, updateCourse, deleteCourse } = useCourses();
   const navigate = useNavigate(); 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: string; title: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'course' | 'lesson'>('course');
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -111,10 +121,15 @@ export default function Courses() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string, type: string) => {
-    if (confirm(`Tem certeza que deseja excluir este ${type === 'lesson' ? 'aula' : 'curso'}?`)) {
-      await deleteCourse(id);
-      toast({ title: `${type === 'lesson' ? 'Aula' : 'Curso'} excluído!` });
+  const handleDeleteClick = (id: string, type: string, title: string) => {
+    setItemToDelete({ id, type, title });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (itemToDelete) {
+      await deleteCourse(itemToDelete.id);
+      toast({ title: `${itemToDelete.type === 'lesson' ? 'Aula' : 'Curso'} excluído com sucesso!` });
+      setItemToDelete(null);
     }
   };
 
@@ -464,7 +479,7 @@ export default function Courses() {
                             size="icon"
                             variant="ghost"
                             className="h-9 w-9 text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
-                            onClick={() => handleDelete(item.id, item.type)}
+                            onClick={() => handleDeleteClick(item.id, item.type, item.title)}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>
@@ -477,6 +492,33 @@ export default function Courses() {
             </div>
           )}
         </main>
+
+        {/* AlertDialog de Exclusão */}
+        <AlertDialog open={itemToDelete !== null} onOpenChange={(open) => {
+          if (!open) setItemToDelete(null);
+        }}>
+          <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border-white/10 text-zinc-100">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white">
+                Deletar {itemToDelete?.type === 'lesson' ? 'Aula' : 'Curso'}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-zinc-400">
+                Tem certeza que deseja deletar <span className="text-white font-semibold">"{itemToDelete?.title}"</span>? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="flex gap-3">
+              <AlertDialogCancel className="bg-zinc-900 border-white/10 text-white hover:bg-zinc-800">
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Deletar
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
