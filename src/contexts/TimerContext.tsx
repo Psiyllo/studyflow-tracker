@@ -82,8 +82,8 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     setSessionData(data);
     setIsRunning(true);
     setIsPaused(false);
-    // Se estiver retomando, carrega o tempo anterior; senão, começa do zero
-    setElapsedSeconds(data.resumeFromDuration ? data.resumeFromDuration * 60 : 0);
+    // Se estiver retomando, carrega o tempo anterior em segundos (já está em segundos, não multiplicar)
+    setElapsedSeconds(data.resumeFromDuration || 0);
     setStartTime(new Date());
   };
 
@@ -99,25 +99,35 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     if (!user || !sessionData || !startTime) return;
 
     const endTime = new Date();
-    const durationMinutes = Math.floor(elapsedSeconds / 60);
     const totalSeconds = elapsedSeconds; // Guardar segundos totais
-    
-    // Se temos segundos que não formam um minuto completo, adicionar ao minuto
-    const displayMinutes = durationMinutes + (elapsedSeconds % 60 > 0 ? 1 : 0);
 
     try {
-      const { error } = await supabase.from('study_sessions').insert({
-        user_id: user.id,
-        course_id: sessionData.courseId,
-        module_id: sessionData.moduleId || null,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        duration_minutes: totalSeconds, // Armazena segundos totais como número
-        study_type: sessionData.studyType,
-        notes: sessionData.notes || null,
-      });
+      // Se está retomando uma sessão existente, faz UPDATE
+      if (sessionData.resumeFromSession) {
+        const { error } = await supabase
+          .from('study_sessions')
+          .update({
+            duration_minutes: totalSeconds,
+            end_time: endTime.toISOString(),
+          })
+          .eq('id', sessionData.resumeFromSession);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // Caso contrário, cria uma nova sessão
+        const { error } = await supabase.from('study_sessions').insert({
+          user_id: user.id,
+          course_id: sessionData.courseId,
+          module_id: sessionData.moduleId || null,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          duration_minutes: totalSeconds,
+          study_type: sessionData.studyType,
+          notes: sessionData.notes || null,
+        });
+
+        if (error) throw error;
+      }
 
       const hours = Math.floor(totalSeconds / 3600);
       const mins = Math.floor((totalSeconds % 3600) / 60);

@@ -15,9 +15,9 @@ const SkeletonCard = () => (
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
-    todayMinutes: 0,
+    todaySeconds: 0,
     dailyGoal: 120,
-    weekMinutes: 0,
+    weekSeconds: 0,
     streak: 0,
     activeCourses: 0,
   });
@@ -26,7 +26,16 @@ export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [chartData, setChartData] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() }); 
+ 
+  const formatDuration = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
 
+    if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  };
   useEffect(() => {
     if (user) {
       fetchStats();
@@ -46,14 +55,15 @@ export default function Dashboard() {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const { data: todaySessions } = await supabase
         .from('study_sessions')
         .select('duration_minutes')
         .eq('user_id', user.id)
         .gte('start_time', today.toISOString());
 
-      const todayMinutes = todaySessions?.reduce((acc, s) => acc + s.duration_minutes, 0) || 0;
+      // duration_minutes contém segundos totais
+      const todaySeconds = todaySessions?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
 
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -65,7 +75,7 @@ export default function Dashboard() {
         .eq('user_id', user.id)
         .gte('start_time', weekAgo.toISOString());
 
-      const weekMinutes = weekSessions?.reduce((acc, s) => acc + s.duration_minutes, 0) || 0;
+      const weekSeconds = weekSessions?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
 
       const { data: dailyStats } = await supabase
         .from('daily_stats')
@@ -94,9 +104,9 @@ export default function Dashboard() {
         .eq('status', 'active');
 
       setStats({
-        todayMinutes,
+        todaySeconds,
         dailyGoal: goalMinutes, 
-        weekMinutes,
+        weekSeconds,
         streak,
         activeCourses: coursesCount || 0,
       });
@@ -162,18 +172,33 @@ export default function Dashboard() {
         sessions?.forEach(session => {
           const sessionMonth = format(parseISO(session.start_time), 'MMM');
           if (dataByMonth[sessionMonth]) {
-            dataByMonth[sessionMonth][session.study_type] += session.duration_minutes;
+            // duration_minutes contém segundos totais -> acumula segundos
+            dataByMonth[sessionMonth][session.study_type] += (session.duration_minutes || 0);
           }
         });
 
-        const chartDataArray = monthsInYear.map(month => ({
-          date: format(month, 'MMM'),
-          video: dataByMonth[format(month, 'MMM')].video,
-          reading: dataByMonth[format(month, 'MMM')].reading,
-          coding: dataByMonth[format(month, 'MMM')].coding,
-          review: dataByMonth[format(month, 'MMM')].review,
-          other: dataByMonth[format(month, 'MMM')].other,
-        }));
+        const chartDataArray = monthsInYear.map(month => {
+          const key = format(month, 'MMM');
+          const videoSeconds = dataByMonth[key].video || 0;
+          const readingSeconds = dataByMonth[key].reading || 0;
+          const codingSeconds = dataByMonth[key].coding || 0;
+          const reviewSeconds = dataByMonth[key].review || 0;
+          const otherSeconds = dataByMonth[key].other || 0;
+
+          return {
+            date: key,
+            video: Math.round(videoSeconds / 60),
+            reading: Math.round(readingSeconds / 60),
+            coding: Math.round(codingSeconds / 60),
+            review: Math.round(reviewSeconds / 60),
+            other: Math.round(otherSeconds / 60),
+            videoSeconds,
+            readingSeconds,
+            codingSeconds,
+            reviewSeconds,
+            otherSeconds,
+          };
+        });
 
         setChartData(chartDataArray);
       } else {
@@ -195,20 +220,35 @@ export default function Dashboard() {
         sessions?.forEach(session => {
           const sessionDate = format(parseISO(session.start_time), 'yyyy-MM-dd');
           if (dataByDay[sessionDate]) {
-            dataByDay[sessionDate][session.study_type] += session.duration_minutes;
+            // duration_minutes contém segundos totais -> acumula segundos
+            dataByDay[sessionDate][session.study_type] += (session.duration_minutes || 0);
           }
         });
 
-        const chartDataArray = daysInRange.map(day => ({
-          date: format(day, 'dd/MM'),
-          fullDate: format(day, 'yyyy-MM-dd'),
-          video: dataByDay[format(day, 'yyyy-MM-dd')].video,
-          reading: dataByDay[format(day, 'yyyy-MM-dd')].reading,
-          coding: dataByDay[format(day, 'yyyy-MM-dd')].coding,
-          review: dataByDay[format(day, 'yyyy-MM-dd')].review,
-          other: dataByDay[format(day, 'yyyy-MM-dd')].other,
-          isToday: isSameDay(day, new Date()),
-        }));
+        const chartDataArray = daysInRange.map(day => {
+          const key = format(day, 'yyyy-MM-dd');
+          const videoSeconds = dataByDay[key].video || 0;
+          const readingSeconds = dataByDay[key].reading || 0;
+          const codingSeconds = dataByDay[key].coding || 0;
+          const reviewSeconds = dataByDay[key].review || 0;
+          const otherSeconds = dataByDay[key].other || 0;
+
+          return {
+            date: format(day, 'dd/MM'),
+            fullDate: key,
+            video: Math.round(videoSeconds / 60),
+            reading: Math.round(readingSeconds / 60),
+            coding: Math.round(codingSeconds / 60),
+            review: Math.round(reviewSeconds / 60),
+            other: Math.round(otherSeconds / 60),
+            videoSeconds,
+            readingSeconds,
+            codingSeconds,
+            reviewSeconds,
+            otherSeconds,
+            isToday: isSameDay(day, new Date()),
+          };
+        });
 
         setChartData(chartDataArray);
       }
@@ -237,7 +277,7 @@ export default function Dashboard() {
     }
   };
 
-  const progressPercentage = Math.min((stats.todayMinutes / stats.dailyGoal) * 100, 100);
+  const progressPercentage = Math.min(((stats.todaySeconds || 0) / 60 / (stats.dailyGoal || 1)) * 100, 100);
 
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-violet-500/30 relative overflow-x-hidden">
@@ -281,7 +321,7 @@ export default function Dashboard() {
                             </span>
                         </div>
                         <div className="space-y-1">
-                            <h3 className="text-3xl font-bold text-white tracking-tight">{stats.todayMinutes} <span className="text-sm font-normal text-zinc-500">min</span></h3>
+                            <h3 className="text-3xl font-bold text-white tracking-tight">{formatDuration(stats.todaySeconds || 0)}</h3>
                             <p className="text-sm text-zinc-400">{progressPercentage.toFixed(0)}% da meta diária</p>
                         </div>
                         <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl group-hover:bg-violet-500/20 transition-all"></div>
@@ -346,7 +386,7 @@ export default function Dashboard() {
                             </div>
                             <div className="text-right">
                                 <span className="text-3xl font-mono font-bold text-white tracking-tighter">
-                                    {stats.todayMinutes}<span className="text-zinc-500 text-lg">/{stats.dailyGoal}</span>
+                                    {formatDuration(stats.todaySeconds || 0)}<span className="text-zinc-500 text-lg">/{stats.dailyGoal}</span>
                                 </span>
                             </div>
                         </div>
@@ -461,7 +501,7 @@ export default function Dashboard() {
                             borderRadius: '8px',
                             color: '#fff',
                           }}
-                          formatter={(value, name) => {
+                          formatter={(value: any, name: any, props: any) => {
                             const labelMap: { [key: string]: string } = {
                               video: 'Vídeo Aula',
                               reading: 'Leitura',
@@ -469,7 +509,32 @@ export default function Dashboard() {
                               review: 'Revisão',
                               other: 'Outro'
                             };
-                            return [`${value} min`, labelMap[name] || name];
+
+                            // O 'name' que chega é o rótulo (ex: 'Vídeo Aula'), não a chave
+                            // Precisamos encontrar qual é a chave original
+                            const reverseLabelMap: { [key: string]: string } = {
+                              'Vídeo Aula': 'video',
+                              'Leitura': 'reading',
+                              'Prática/Código': 'coding',
+                              'Revisão': 'review',
+                              'Outro': 'other'
+                            };
+
+                            const secondsKeyMap: { [key: string]: string } = {
+                              video: 'videoSeconds',
+                              reading: 'readingSeconds',
+                              coding: 'codingSeconds',
+                              review: 'reviewSeconds',
+                              other: 'otherSeconds'
+                            };
+
+                            const payload = props && props.payload ? props.payload : {};
+                            // Converter o rótulo de volta para a chave
+                            const dataKey = reverseLabelMap[name] || name;
+                            const secondsKey = secondsKeyMap[dataKey];
+                            const seconds = payload[secondsKey] !== undefined ? payload[secondsKey] : Math.round((value || 0) * 60);
+
+                            return [formatDuration(seconds), name];
                           }}
                           cursor={{ fill: 'rgba(124, 58, 237, 0.1)' }}
                         />
@@ -500,13 +565,20 @@ export default function Dashboard() {
                       <div className="bg-zinc-800/30 border border-white/5 rounded-lg p-4">
                         <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Total do Período</p>
                         <p className="text-2xl font-bold text-violet-400">
-                          {chartData.reduce((acc, day) => acc + (day.video || 0) + (day.reading || 0) + (day.coding || 0) + (day.review || 0) + (day.other || 0), 0)} <span className="text-sm text-zinc-500">min</span>
+                          {(() => {
+                            const totalSeconds = chartData.reduce((acc, day) => acc + (day.videoSeconds || 0) + (day.readingSeconds || 0) + (day.codingSeconds || 0) + (day.reviewSeconds || 0) + (day.otherSeconds || 0), 0);
+                            return formatDuration(totalSeconds);
+                          })()}
                         </p>
                       </div>
                       <div className="bg-zinc-800/30 border border-white/5 rounded-lg p-4">
                         <p className="text-xs text-zinc-400 uppercase tracking-wide mb-1">Média por Dia</p>
                         <p className="text-2xl font-bold text-blue-400">
-                          {Math.round(chartData.reduce((acc, day) => acc + (day.video || 0) + (day.reading || 0) + (day.coding || 0) + (day.review || 0) + (day.other || 0), 0) / chartData.length)} <span className="text-sm text-zinc-500">min</span>
+                          {(() => {
+                            const totalSeconds = chartData.reduce((acc, day) => acc + (day.videoSeconds || 0) + (day.readingSeconds || 0) + (day.codingSeconds || 0) + (day.reviewSeconds || 0) + (day.otherSeconds || 0), 0);
+                            const avgSeconds = chartData.length ? Math.round(totalSeconds / chartData.length) : 0;
+                            return formatDuration(avgSeconds);
+                          })()}
                         </p>
                       </div>
                       <div className="bg-zinc-800/30 border border-white/5 rounded-lg p-4">
