@@ -3,13 +3,14 @@ import { Navbar } from '@/components/Navbar';
 import { Clock, Target, Flame, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { format, addMonths, subMonths, addWeeks, subWeeks } from 'date-fns'; 
+import { format, addMonths, subMonths, addWeeks, subWeeks, differenceInDays } from 'date-fns'; 
 import { ptBR } from 'date-fns/locale';
 import { ActivityChart } from '@/components/dashboard/ActivityChart';
 import { TopicDistribution } from '@/components/dashboard/TopicDistribution';
 import { FocusRadar } from '@/components/dashboard/FocusRadar';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useDashboardCharts, ViewMode, GroupBy } from '@/hooks/useDashboardCharts';
+import { useRefreshOnSessionFinish } from '@/hooks/useRefreshOnSessionFinish';
 
 const SkeletonCard = () => (
     <div className="h-[140px] bg-zinc-800/50 rounded-2xl animate-pulse border border-white/5" />
@@ -24,6 +25,9 @@ export default function Dashboard() {
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: chartsData, isLoading: chartsLoading } = useDashboardCharts(viewMode, currentDate, groupBy);
+
+  // Atualizar dashboard automaticamente quando sessão termina
+  useRefreshOnSessionFinish();
 
   const loading = statsLoading || chartsLoading;
 
@@ -271,7 +275,12 @@ export default function Dashboard() {
                             <p className="text-2xl font-bold text-blue-400">
                                 {(() => {
                                     const totalSeconds = chartsData?.chartData.reduce((acc, day) => acc + (day.totalSeconds || 0), 0) || 0;
-                                    const avgSeconds = chartsData?.chartData.length ? Math.round(totalSeconds / chartsData.chartData.length) : 0;
+                                    // Calcular número real de dias no período (não apenas quantidade de pontos)
+                                    let daysInPeriod = 1;
+                                    if (chartsData?.dateRange) {
+                                        daysInPeriod = differenceInDays(chartsData.dateRange.end, chartsData.dateRange.start) + 1;
+                                    }
+                                    const avgSeconds = Math.round(totalSeconds / daysInPeriod);
                                     return formatDuration(avgSeconds);
                                 })()}
                             </p>

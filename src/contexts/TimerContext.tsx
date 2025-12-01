@@ -22,6 +22,7 @@ interface TimerContextType {
   resumeTimer: () => void;
   finishSession: () => Promise<void>;
   resetTimer: () => void;
+  setOnSessionFinished?: (callback: () => void) => void;
 }
 
 const TimerContext = createContext<TimerContextType | undefined>(undefined);
@@ -36,6 +37,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
   const [pausedTimeMs, setPausedTimeMs] = useState<number | null>(null); // acumula tempo quando pausa/retoma
   const [sessionStartTimeMs, setSessionStartTimeMs] = useState<number | null>(null); // start_time para BD
   const pageVisibilityRef = useRef<boolean>(true);
+  const onSessionFinishedRef = useRef<(() => void) | null>(null);
 
   // Restaurar estado ao carregar
   useEffect(() => {
@@ -197,6 +199,11 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
         description: `Você estudou por ${timeStr}.`,
       });
 
+      // Chamar callback se registrado
+      if (onSessionFinishedRef.current) {
+        onSessionFinishedRef.current();
+      }
+
       resetTimer();
     } catch (error) {
       console.error('Error saving session:', error);
@@ -218,6 +225,10 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     setSessionStartTimeMs(null);
   };
 
+  const setOnSessionFinished = (callback: () => void) => {
+    onSessionFinishedRef.current = callback;
+  };
+
   return (
     <TimerContext.Provider
       value={{
@@ -230,6 +241,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
         resumeTimer,
         finishSession,
         resetTimer,
+        setOnSessionFinished,
       }}
     >
       {children}

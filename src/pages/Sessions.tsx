@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Timer } from '@/components/Timer'; 
 import { Button } from '@/components/ui/button';
@@ -46,12 +46,12 @@ const studyTypes = Object.keys(studyTypesConfig).map(key => ({
 }));
 
 export default function Sessions() {
-  const { startTimer, isRunning } = useTimer();
+  const { startTimer, isRunning, setOnSessionFinished } = useTimer();
   const [filters, setFilters] = useState({
     courseId: '',
     studyType: '',
   });
-  const { sessions, loading, deleteSession } = useSessions(
+  const { sessions, loading, deleteSession, refetch } = useSessions(
     filters.courseId || filters.studyType ? filters : undefined
   );
   const { courses, lessons } = useCourses();
@@ -64,6 +64,16 @@ export default function Sessions() {
     studyType: 'video',
     notes: '',
   });
+
+  // Registrar callback para quando sessão terminar
+  useEffect(() => {
+    setOnSessionFinished?.(() => {
+      // Aguardar um pouco para o backend processar a inserção
+      setTimeout(() => {
+        refetch();
+      }, 500);
+    });
+  }, [setOnSessionFinished, refetch]);
 
   const handleResumeSession = (session: any) => {
     // Inicia o timer com os dados da sessão anterior
