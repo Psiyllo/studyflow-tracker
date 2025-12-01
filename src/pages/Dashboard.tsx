@@ -386,7 +386,7 @@ export default function Dashboard() {
                             </div>
                             <div className="text-right">
                                 <span className="text-3xl font-mono font-bold text-white tracking-tighter">
-                                    {formatDuration(stats.todaySeconds || 0)}<span className="text-zinc-500 text-lg">/{stats.dailyGoal}</span>
+                                    {formatDuration(stats.todaySeconds || 0)}<span className="text-zinc-500 text-lg">/{formatDuration(stats.dailyGoal * 60)}</span>
                                 </span>
                             </div>
                         </div>
@@ -492,7 +492,7 @@ export default function Dashboard() {
                         <YAxis 
                           stroke="rgba(255,255,255,0.4)"
                           style={{ fontSize: '12px' }}
-                          label={{ value: 'Minutos', angle: -90, position: 'insideLeft', style: { fill: 'rgba(255,255,255,0.6)' } }}
+                          label={{ value: 'Tempo (minutos)', angle: -90, position: 'insideLeft', style: { fill: 'rgba(255,255,255,0.6)' } }}
                         />
                         <Tooltip
                           contentStyle={{
