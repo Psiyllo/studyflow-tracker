@@ -107,7 +107,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
         const { error } = await supabase
           .from('study_sessions')
           .update({
-            duration_minutes: totalSeconds,
+            duration_seconds: totalSeconds,
             end_time: endTime.toISOString(),
           })
           .eq('id', sessionData.resumeFromSession);
@@ -121,7 +121,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
           module_id: sessionData.moduleId || null,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
-          duration_minutes: totalSeconds,
+          duration_seconds: totalSeconds,
           study_type: sessionData.studyType,
           notes: sessionData.notes || null,
         });

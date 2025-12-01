@@ -9,7 +9,7 @@ export interface StudySession {
   module_id: string | null;
   start_time: string;
   end_time: string;
-  duration_minutes: number;
+  duration_seconds: number;
   study_type: 'video' | 'reading' | 'coding' | 'review' | 'other';
   notes: string | null;
   created_at: string;

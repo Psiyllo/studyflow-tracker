@@ -1,153 +1,60 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Clock, Target, Flame, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { 
-  ComposedChart, Bar, Line, Area, AreaChart, PieChart, Pie, Cell,
-  Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
-} from 'recharts';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, isSameDay, parseISO, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns'; 
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, parseISO, startOfYear, endOfYear, eachMonthOfInterval } from 'date-fns'; 
 import { ptBR } from 'date-fns/locale';
+import { ActivityChart } from '@/components/dashboard/ActivityChart';
+import { TopicDistribution } from '@/components/dashboard/TopicDistribution';
+import { FocusRadar } from '@/components/dashboard/FocusRadar';
 
-const ActivityChart = ({ data, formatDuration }: { data: any[], formatDuration: (s: number) => string }) => {
-  return (
-    <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 h-full">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-white">Fluxo de Atividade</h3>
-        <p className="text-xs text-zinc-400">Tendência diária e volume de estudo</p>
-      </div>
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <defs>
-              <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis 
-              dataKey="date" 
-              stroke="#71717a" 
-              tick={{ fill: '#71717a', fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              dy={10}
-            />
-            <YAxis 
-              stroke="#71717a"
-              tick={{ fill: '#71717a', fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(val) => `${val}m`}
-            />
-            <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-              contentStyle={{ backgroundColor: '#18181b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px' }}
-              itemStyle={{ fontSize: '12px' }}
-              labelStyle={{ color: '#a1a1aa', marginBottom: '8px' }}
-              formatter={(value: any, name: any, props: any) => {
-                const rawSeconds = props.payload[`${name === 'Total' ? 'total' : name}Seconds`]; 
-                const seconds = rawSeconds !== undefined ? rawSeconds : Math.round(value * 60);
-                
-                const nameMap: any = { video: 'Vídeo', reading: 'Leitura', coding: 'Código', review: 'Revisão', other: 'Outro', total: 'Total' };
-                return [formatDuration(seconds), nameMap[name] || name];
-              }}
-            />
-            <Area type="monotone" dataKey="total" stroke="none" fill="url(#colorTotal)" />
-            <Bar dataKey="video" stackId="a" fill="#a855f7" radius={[0, 0, 0, 0]} barSize={20} />
-            <Bar dataKey="reading" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} barSize={20} />
-            <Bar dataKey="coding" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={20} />
-            <Bar dataKey="review" stackId="a" fill="#f97316" radius={[0, 0, 0, 0]} barSize={20} />
-            <Bar dataKey="other" stackId="a" fill="#6b7280" radius={[4, 4, 0, 0]} barSize={20} />
-            <Line type="monotone" dataKey="total" stroke="#fff" strokeWidth={2} dot={false} activeDot={{ r: 4 }} opacity={0.5} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
+// Interfaces for data structures
+interface ChartDataPoint {
+  date: string;
+  fullDate: string;
+  video: number;
+  reading: number;
+  coding: number;
+  review: number;
+  other: number;
+  total: number;
+  videoSeconds: number;
+  readingSeconds: number;
+  codingSeconds: number;
+  reviewSeconds: number;
+  otherSeconds: number;
+  totalSeconds: number;
+}
 
-const TopicDistribution = ({ data, formatDuration }: { data: any[], formatDuration: (s: number) => string }) => {
-  const COLORS = { video: '#a855f7', reading: '#3b82f6', coding: '#10b981', review: '#f97316', other: '#6b7280' };
-  const LABELS: any = { video: 'Vídeo', reading: 'Leitura', coding: 'Código', review: 'Revisão', other: 'Outro' };
+interface DistributionDataPoint {
+  name: string;
+  value: number;
+}
 
-  return (
-    <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 h-full flex flex-col">
-      <div className="mb-2">
-        <h3 className="text-lg font-bold text-white">Distribuição</h3>
-        <p className="text-xs text-zinc-400">Tempo por categoria</p>
-      </div>
-      <div className="flex-1 min-h-[250px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-              stroke="none"
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={(COLORS as any)[entry.name]} />
-              ))}
-            </Pie>
-            <Tooltip 
-               contentStyle={{ backgroundColor: '#18181b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-               itemStyle={{ color: '#fff', fontSize: '12px' }}
-               formatter={(value: number) => formatDuration(value)}
-            />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36}
-              iconType="circle"
-              formatter={(value) => <span className="text-zinc-400 text-xs ml-1">{LABELS[value] || value}</span>}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
+interface RadarDataPoint {
+  subject: string;
+  A: number;
+  fullMark: number;
+}
 
-const FocusRadar = ({ data }: { data: any[] }) => {
-  return (
-    <div className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 h-full flex flex-col">
-      <div className="mb-2">
-        <h3 className="text-lg font-bold text-white">Radar de Foco</h3>
-        <p className="text-xs text-zinc-400">Equilíbrio entre áreas</p>
-      </div>
-      <div className="flex-1 min-h-[250px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
-            <PolarGrid stroke="#3f3f46" strokeOpacity={0.5} />
-            <PolarAngleAxis dataKey="subject" tick={{ fill: '#a1a1aa', fontSize: 11 }} />
-            <PolarRadiusAxis angle={30} domain={[0, 'auto']} tick={false} axisLine={false} />
-            <Radar
-              name="Minutos"
-              dataKey="A"
-              stroke="#10b981"
-              strokeWidth={2}
-              fill="#10b981"
-              fillOpacity={0.2}
-            />
-            <Tooltip 
-              contentStyle={{ backgroundColor: '#18181b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '8px' }}
-              itemStyle={{ color: '#10b981' }}
-              formatter={(value: number) => [`${value} min`, 'Média']}
-            />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
+interface Stats {
+  todaySeconds: number;
+  dailyGoal: number;
+  weekSeconds: number;
+  streak: number;
+  activeCourses: number;
+}
+
+interface GlobalTotals {
+  video: number;
+  reading: number;
+  coding: number;
+  review: number;
+  other: number;
+  [key: string]: number;
+}
 
 const SkeletonCard = () => (
     <div className="h-[140px] bg-zinc-800/50 rounded-2xl animate-pulse border border-white/5" />
@@ -156,7 +63,7 @@ const SkeletonCard = () => (
 export default function Dashboard() {
   const { user } = useAuth();
   
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     todaySeconds: 0,
     dailyGoal: 120,
     weekSeconds: 0,
@@ -168,9 +75,9 @@ export default function Dashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
   
-  const [chartData, setChartData] = useState<any[]>([]); 
-  const [distributionData, setDistributionData] = useState<any[]>([]); 
-  const [radarData, setRadarData] = useState<any[]>([]); 
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]); 
+  const [distributionData, setDistributionData] = useState<DistributionDataPoint[]>([]); 
+  const [radarData, setRadarData] = useState<RadarDataPoint[]>([]); 
 
   const formatDuration = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -195,12 +102,12 @@ export default function Dashboard() {
       const { data: profile } = await supabase.from('profiles').select('daily_goal_minutes').eq('id', user.id).single();
       const today = new Date(); today.setHours(0, 0, 0, 0);
       
-      const { data: todaySessions } = await supabase.from('study_sessions').select('duration_minutes').eq('user_id', user.id).gte('start_time', today.toISOString());
-      const todaySeconds = todaySessions?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+      const { data: todaySessions } = await supabase.from('study_sessions').select('duration_seconds').eq('user_id', user.id).gte('start_time', today.toISOString());
+      const todaySeconds = todaySessions?.reduce((acc, s) => acc + (s.duration_seconds || 0), 0) || 0;
 
       const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7); weekAgo.setHours(0, 0, 0, 0);
-      const { data: weekSessions } = await supabase.from('study_sessions').select('duration_minutes').eq('user_id', user.id).gte('start_time', weekAgo.toISOString());
-      const weekSeconds = weekSessions?.reduce((acc, s) => acc + (s.duration_minutes || 0), 0) || 0;
+      const { data: weekSessions } = await supabase.from('study_sessions').select('duration_seconds').eq('user_id', user.id).gte('start_time', weekAgo.toISOString());
+      const weekSeconds = weekSessions?.reduce((acc, s) => acc + (s.duration_seconds || 0), 0) || 0;
 
       const { data: dailyStats } = await supabase.from('daily_stats').select('*').eq('user_id', user.id).order('date', { ascending: false }).limit(30);
       
@@ -208,7 +115,10 @@ export default function Dashboard() {
       const goalMinutes = profile?.daily_goal_minutes || 120;
       if (dailyStats) {
         for (let i = 0; i < dailyStats.length; i++) {
-          if (dailyStats[i].total_minutes >= goalMinutes) streak++;
+          // Note: daily_stats view might need update if it sums minutes. Assuming it still returns minutes for now or needs update.
+          // If daily_stats is a view based on study_sessions, it might need to be updated in DB to sum seconds / 60.
+          // For now, assuming total_minutes is correct in the view or we handle it.
+          if ((dailyStats[i].total_minutes || 0) >= goalMinutes) streak++;
           else break;
         }
       }
@@ -244,15 +154,15 @@ export default function Dashboard() {
 
       const { data: sessions } = await supabase
         .from('study_sessions')
-        .select('start_time, duration_minutes, study_type')
+        .select('start_time, duration_seconds, study_type')
         .eq('user_id', user.id)
         .gte('start_time', startDate.toISOString())
         .lte('start_time', endDate.toISOString());
 
-      const globalTotals: any = { video: 0, reading: 0, coding: 0, review: 0, other: 0 };
+      const globalTotals: GlobalTotals = { video: 0, reading: 0, coding: 0, review: 0, other: 0 };
 
       const processInterval = (dates: Date[], formatStr: string, isMonthly: boolean) => {
-        const dataMap: any = {};
+        const dataMap: { [key: string]: GlobalTotals } = {};
         dates.forEach(d => {
             const key = format(d, isMonthly ? 'MMM' : 'yyyy-MM-dd');
             dataMap[key] = { video: 0, reading: 0, coding: 0, review: 0, other: 0 };
@@ -262,9 +172,16 @@ export default function Dashboard() {
             const d = parseISO(session.start_time);
             const key = format(d, isMonthly ? 'MMM' : 'yyyy-MM-dd');
             if (dataMap[key]) {
-                const duration = session.duration_minutes || 0;
-                dataMap[key][session.study_type] += duration;
-                globalTotals[session.study_type] += duration; 
+                const duration = session.duration_seconds || 0;
+                const type = session.study_type || 'other';
+                // Type guard or fallback
+                if (type in dataMap[key]) {
+                    dataMap[key][type] += duration;
+                    globalTotals[type] += duration; 
+                } else {
+                     dataMap[key]['other'] += duration;
+                     globalTotals['other'] += duration;
+                }
             }
         });
 

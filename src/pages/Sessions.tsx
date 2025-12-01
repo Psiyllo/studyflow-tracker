@@ -68,7 +68,7 @@ export default function Sessions() {
   const handleResumeSession = (session: any) => {
     // Inicia o timer com os dados da sessão anterior
     // duration_minutes agora contém os segundos totais
-    const elapsedSeconds = session.duration_minutes;
+    const elapsedSeconds = session.duration_seconds;
     const hours = Math.floor(elapsedSeconds / 3600);
     const mins = Math.floor((elapsedSeconds % 3600) / 60);
     const secs = elapsedSeconds % 60;
@@ -464,7 +464,7 @@ export default function Sessions() {
                         <div className="flex items-center gap-4 pl-4 flex-shrink-0">
                           <div className="text-right">
                             <div className="text-lg font-mono font-bold text-violet-400 tracking-tighter">
-                              {formatDuration(session.duration_minutes)}
+                              {formatDuration(session.duration_seconds)}
                             </div>
                             <div className="text-xs text-zinc-500 uppercase font-medium">tempo</div>
                           </div>

@@ -110,7 +110,7 @@ export type Database = {
         Row: {
           course_id: string
           created_at: string | null
-          duration_minutes: number
+          duration_seconds: number
           end_time: string
           id: string
           module_id: string | null
@@ -122,7 +122,7 @@ export type Database = {
         Insert: {
           course_id: string
           created_at?: string | null
-          duration_minutes: number
+          duration_seconds: number
           end_time: string
           id?: string
           module_id?: string | null
@@ -134,7 +134,7 @@ export type Database = {
         Update: {
           course_id?: string
           created_at?: string | null
-          duration_minutes?: number
+          duration_seconds?: number
           end_time?: string
           id?: string
           module_id?: string | null
