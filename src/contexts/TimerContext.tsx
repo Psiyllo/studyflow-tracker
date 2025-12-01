@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -32,8 +32,12 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
-  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [startTimeMs, setStartTimeMs] = useState<number | null>(null); // timestamp em ms
+  const [pausedTimeMs, setPausedTimeMs] = useState<number | null>(null); // acumula tempo quando pausa/retoma
+  const [sessionStartTimeMs, setSessionStartTimeMs] = useState<number | null>(null); // start_time para BD
+  const pageVisibilityRef = useRef<boolean>(true);
 
+  // Restaurar estado ao carregar
   useEffect(() => {
     const saved = localStorage.getItem('timer-state');
     if (saved) {
@@ -43,13 +47,24 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
         setIsPaused(parsed.isPaused);
         setElapsedSeconds(parsed.elapsedSeconds);
         setSessionData(parsed.sessionData);
-        setStartTime(parsed.startTime ? new Date(parsed.startTime) : null);
+        setStartTimeMs(parsed.startTimeMs ? Number(parsed.startTimeMs) : null);
+        setPausedTimeMs(parsed.pausedTimeMs ? Number(parsed.pausedTimeMs) : null);
+        setSessionStartTimeMs(parsed.sessionStartTimeMs ? Number(parsed.sessionStartTimeMs) : null);
       } catch (error) {
         console.error('Error loading timer state:', error);
       }
     }
+
+    // Page Visibility API para detectar quando aba fica em background
+    const handleVisibilityChange = () => {
+      pageVisibilityRef.current = document.visibilityState === 'visible';
+      // Não precisa fazer nada aqui, o useEffect abaixo cuida de atualizar
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Salvar estado no localStorage
   useEffect(() => {
     if (isRunning || isPaused) {
       localStorage.setItem('timer-state', JSON.stringify({
@@ -57,49 +72,90 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
         isPaused,
         elapsedSeconds,
         sessionData,
-        startTime,
+        startTimeMs,
+        pausedTimeMs,
+        sessionStartTimeMs,
       }));
     } else {
       localStorage.removeItem('timer-state');
     }
-  }, [isRunning, isPaused, elapsedSeconds, sessionData, startTime]);
+  }, [isRunning, isPaused, elapsedSeconds, sessionData, startTimeMs, pausedTimeMs, sessionStartTimeMs]);
 
+  // Atualizar elapsedSeconds baseado em timestamps
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (isRunning && !isPaused) {
+    if (isRunning && !isPaused && startTimeMs !== null) {
       interval = setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
-      }, 1000);
+        const now = Date.now();
+        const elapsed = Math.round((now - startTimeMs) / 1000);
+        const total = Math.round((pausedTimeMs || 0) / 1000) + elapsed;
+        setElapsedSeconds(total);
+      }, 100); // Update UI a cada 100ms (mais responsivo)
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isRunning, isPaused]);
+  }, [isRunning, isPaused, startTimeMs, pausedTimeMs]);
 
   const startTimer = (data: SessionData) => {
+    const now = Date.now();
     setSessionData(data);
     setIsRunning(true);
     setIsPaused(false);
-    // Se estiver retomando, carrega o tempo anterior em segundos (já está em segundos, não multiplicar)
-    setElapsedSeconds(data.resumeFromDuration || 0);
-    setStartTime(new Date());
+    setStartTimeMs(now); // Timestamp de agora
+    setPausedTimeMs((data.resumeFromDuration || 0) * 1000); // Converter segundos para ms
+    
+    // Se não for retomada, salva o start_time; caso contrário, usa o anterior
+    if (!data.resumeFromSession) {
+      setSessionStartTimeMs(now);
+    }
+
+    console.log('[TimerContext] startTimer', {
+      resumeFromDuration: data.resumeFromDuration,
+      pausedTimeMs: (data.resumeFromDuration || 0) * 1000,
+      now,
+    });
   };
 
   const pauseTimer = () => {
+    if (startTimeMs !== null) {
+      // Acumula o tempo decorrido desde que iniciou (ou retomou)
+      const elapsed = Date.now() - startTimeMs;
+      setPausedTimeMs((prev) => (prev || 0) + elapsed);
+      console.log('[TimerContext] pauseTimer', { elapsed, totalPausedTimeMs: (pausedTimeMs || 0) + elapsed });
+    }
     setIsPaused(true);
   };
 
   const resumeTimer = () => {
+    setStartTimeMs(Date.now()); // Reinicia o contador
     setIsPaused(false);
+    console.log('[TimerContext] resumeTimer', { now: Date.now(), pausedTimeMs });
   };
 
   const finishSession = async () => {
-    if (!user || !sessionData || !startTime) return;
+    if (!user || !sessionData || sessionStartTimeMs === null) return;
 
-    const endTime = new Date();
-    const totalSeconds = elapsedSeconds; // Guardar segundos totais
+    // Calcular tempo final
+    let totalSeconds = Math.round((pausedTimeMs || 0) / 1000);
+    if (isRunning && !isPaused && startTimeMs !== null) {
+      const elapsed = Math.round((Date.now() - startTimeMs) / 1000);
+      totalSeconds += elapsed;
+    }
+
+    const endTimeMs = Date.now();
+
+    console.log('[TimerContext] finishSession', {
+      sessionStartTimeMs,
+      endTimeMs,
+      pausedTimeMs,
+      startTimeMs,
+      isRunning,
+      isPaused,
+      totalSeconds,
+    });
 
     try {
       // Se está retomando uma sessão existente, faz UPDATE
@@ -108,7 +164,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
           .from('study_sessions')
           .update({
             duration_seconds: totalSeconds,
-            end_time: endTime.toISOString(),
+            end_time: new Date(endTimeMs).toISOString(),
           })
           .eq('id', sessionData.resumeFromSession);
 
@@ -119,8 +175,8 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
           user_id: user.id,
           course_id: sessionData.courseId,
           module_id: sessionData.moduleId || null,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
+          start_time: new Date(sessionStartTimeMs).toISOString(),
+          end_time: new Date(endTimeMs).toISOString(),
           duration_seconds: totalSeconds,
           study_type: sessionData.studyType,
           notes: sessionData.notes || null,
@@ -157,7 +213,9 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     setIsPaused(false);
     setElapsedSeconds(0);
     setSessionData(null);
-    setStartTime(null);
+    setStartTimeMs(null);
+    setPausedTimeMs(null);
+    setSessionStartTimeMs(null);
   };
 
   return (

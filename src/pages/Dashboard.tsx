@@ -9,7 +9,7 @@ import { ActivityChart } from '@/components/dashboard/ActivityChart';
 import { TopicDistribution } from '@/components/dashboard/TopicDistribution';
 import { FocusRadar } from '@/components/dashboard/FocusRadar';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
-import { useDashboardCharts, ViewMode } from '@/hooks/useDashboardCharts';
+import { useDashboardCharts, ViewMode, GroupBy } from '@/hooks/useDashboardCharts';
 
 const SkeletonCard = () => (
     <div className="h-[140px] bg-zinc-800/50 rounded-2xl animate-pulse border border-white/5" />
@@ -20,9 +20,10 @@ export default function Dashboard() {
   
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [groupBy, setGroupBy] = useState<GroupBy>('studyType');
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: chartsData, isLoading: chartsLoading } = useDashboardCharts(viewMode, currentDate);
+  const { data: chartsData, isLoading: chartsLoading } = useDashboardCharts(viewMode, currentDate, groupBy);
 
   const loading = statsLoading || chartsLoading;
 
@@ -47,7 +48,6 @@ export default function Dashboard() {
     else if (viewMode === 'month') setCurrentDate(addMonths(currentDate, 1));
     else setCurrentDate(new Date(currentDate.getFullYear() + 1, currentDate.getMonth(), currentDate.getDate()));
   };
-
   const progressPercentage = Math.min(((stats?.todaySeconds || 0) / 60 / (stats?.dailyGoal || 1)) * 100, 100);
 
   if (!user) return null;
@@ -182,7 +182,7 @@ export default function Dashboard() {
                     </p>
                 </div>
                 
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
                     <div className="flex gap-1 bg-zinc-900/50 p-1 rounded-lg border border-white/5">
                         <Button onClick={handlePrevious} variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/5"><ChevronLeft className="h-4 w-4" /></Button>
                         <Button onClick={handleNext} variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/5"><ChevronRight className="h-4 w-4" /></Button>
@@ -203,6 +203,29 @@ export default function Dashboard() {
                         </button>
                         ))}
                     </div>
+
+                    <div className="flex gap-1 bg-zinc-900/50 p-1 rounded-lg border border-white/5">
+                        <button
+                            onClick={() => setGroupBy('studyType')}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                            groupBy === 'studyType'
+                                ? 'bg-violet-600 text-white shadow-sm'
+                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            Por Tipo
+                        </button>
+                        <button
+                            onClick={() => setGroupBy('course')}
+                            className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                            groupBy === 'course'
+                                ? 'bg-violet-600 text-white shadow-sm'
+                                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            Por Curso
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -213,7 +236,12 @@ export default function Dashboard() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-3 h-[400px]">
-                        <ActivityChart data={chartsData?.chartData || []} formatDuration={formatDuration} />
+                        <ActivityChart 
+                          data={chartsData?.chartData || []} 
+                          formatDuration={formatDuration} 
+                          groupBy={groupBy}
+                          courseInfoMap={chartsData?.courseInfoMap}
+                        />
                     </div>
 
                     <div className="lg:col-span-1 h-[350px]">
@@ -221,7 +249,11 @@ export default function Dashboard() {
                     </div>
 
                     <div className="lg:col-span-1 h-[350px]">
-                        <TopicDistribution data={chartsData?.distributionData || []} formatDuration={formatDuration} />
+                        <TopicDistribution 
+                          data={chartsData?.distributionData || []} 
+                          formatDuration={formatDuration}
+                          groupBy={groupBy}
+                        />
                     </div>
 
                     <div className="lg:col-span-1 h-[350px] bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6 flex flex-col justify-center gap-4">
