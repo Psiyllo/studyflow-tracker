@@ -15,8 +15,8 @@ export default function CourseNotes() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { notes, addNote, updateNote, deleteNote } = useCourseNotes(id!);
-    const { courses } = useCourses();
-    const course = courses.find(c => c.id === id);
+    const { courses, lessons } = useCourses();
+    const course = courses.find(c => c.id === id) || lessons.find(l => l.id === id);
     const [open, setOpen] = useState(false);
     const [title, setTitle] = useState("");
     const [desc, setDesc] = useState("");
@@ -37,10 +37,10 @@ export default function CourseNotes() {
         try {
             if (editingNoteId) {
                 await updateNote(editingNoteId, title, desc);
-                toast({ title: "Anotação atualizada!", description: title, variant: "success" });
+                toast({ title: "Anotação atualizada!", description: title });
             } else {
                 await addNote(title, desc);
-                toast({ title: "Anotação criada!", description: title, variant: "success" });
+                toast({ title: "Anotação criada!", description: title });
             }
         } catch (error) {
             toast({ title: "Erro ao salvar", description: "Não foi possível salvar a anotação.", variant: "destructive" });
@@ -91,6 +91,9 @@ export default function CourseNotes() {
                                     Anotações: {course ? course.title : id}
                                 </h1>
                                 <p className="text-zinc-500 text-sm mt-1">
+                                    <span className="inline-block mr-3 px-2 py-1 rounded-full bg-zinc-800/50 border border-white/10 text-xs font-medium">
+                                        {course?.type === 'lesson' ? 'Aula' : 'Curso'}
+                                    </span>
                                     {course?.platform && <span className="mr-3">{course.platform}</span>}
                                     {course?.url && (
                                         <a 

@@ -293,7 +293,6 @@ export default function Courses() {
                           </SelectTrigger>
                           <SelectContent className="bg-zinc-900 border-white/10 text-zinc-200">
                             <SelectItem value="active">Não Assistida</SelectItem>
-                            <SelectItem value="paused">Assistindo</SelectItem>
                             <SelectItem value="completed">Assistida</SelectItem>
                           </SelectContent>
                         </Select>
@@ -463,17 +462,15 @@ export default function Courses() {
                             <Edit className="h-4 w-4" />
                           </Button>
 
-                          {!isLesson && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              title="Ver Anotações"
-                              className="h-9 w-9 text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10"
-                              onClick={() => navigate(`/courses/${item.id}/notes`)}
-                            >
-                              <NotebookText className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            title="Ver Anotações"
+                            className="h-9 w-9 text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10"
+                            onClick={() => navigate(`/courses/${item.id}/notes`)}
+                          >
+                            <NotebookText className="h-4 w-4" />
+                          </Button>
 
                           <Button
                             size="icon"
