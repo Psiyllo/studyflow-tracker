@@ -5,13 +5,20 @@ export function useCourseNotes(courseId: string) {
   const [notes, setNotes] = useState([]);
 
   const loadNotes = async () => {
-    const { data } = await supabase
-      .from("course_notes")
-      .select("*")
-      .eq("course_id", courseId)
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("course_notes")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("created_at", { ascending: false });
 
-    setNotes(data || []);
+      if (error) throw error;
+      setNotes(data || []);
+    } catch (error) {
+      console.error("Error loading notes:", error);
+      // Optionally set empty notes or handle error state
+      setNotes([]);
+    }
   };
 
   const addNote = async (title: string, description: string) => {

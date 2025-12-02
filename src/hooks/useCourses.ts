@@ -38,26 +38,48 @@ export const useCourses = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      console.log("Fetching courses for user:", user.id);
+      
+      // 1. Fetch courses
+      const { data: coursesData, error: coursesError } = await supabase
         .from("courses")
-        .select(`
-          *,
-          course_notes (*)
-        `)
+        .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (coursesError) {
+        console.error("Supabase error fetching courses:", coursesError);
+        throw coursesError;
+      }
 
-      const formatted = (data || []).map((course: any) => ({
+      // 2. Fetch notes (separately to avoid FK relationship error)
+      const { data: notesData, error: notesError } = await supabase
+        .from("course_notes")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (notesError) {
+        console.error("Supabase error fetching notes:", notesError);
+        // We continue even if notes fail, just assuming empty notes
+      }
+
+      console.log("Raw courses data:", coursesData);
+      console.log("Raw notes data:", notesData);
+
+      const formatted = (coursesData || []).map((course: any) => ({
         ...course,
-        notes: course.course_notes || [],
-        type: course.type || 'course', // Garantir que sempre tem um tipo
+        notes: (notesData || []).filter((n: any) => n.course_id === course.id),
+        type: course.type || 'course',
       }));
+
+      console.log("Formatted courses:", formatted);
 
       // Separar cursos e aulas
       const coursesOnly = formatted.filter(c => c.type === 'course');
       const lessonsOnly = formatted.filter(c => c.type === 'lesson');
+
+      console.log("Courses only:", coursesOnly);
+      console.log("Lessons only:", lessonsOnly);
 
       setCourses(coursesOnly);
       setLessons(lessonsOnly);
@@ -66,7 +88,9 @@ export const useCourses = () => {
     } finally {
       setLoading(false);
     }
-  };  useEffect(() => {
+  };
+
+  useEffect(() => {
     fetchCourses();
   }, [user?.id]);
 

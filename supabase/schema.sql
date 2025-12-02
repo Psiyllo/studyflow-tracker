@@ -21,6 +21,17 @@ create table public.courses (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- COURSE NOTES
+create table public.course_notes (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  course_id uuid references public.courses(id) on delete cascade not null,
+  title text not null,
+  description text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- MODULES
 create table public.modules (
   id uuid default gen_random_uuid() primary key,
@@ -59,6 +70,7 @@ group by
 -- ROW LEVEL SECURITY
 alter table public.profiles enable row level security;
 alter table public.courses enable row level security;
+alter table public.course_notes enable row level security;
 alter table public.modules enable row level security;
 alter table public.study_sessions enable row level security;
 
@@ -111,6 +123,23 @@ create policy "Users can update modules of their courses"
 create policy "Users can delete modules of their courses"
   on public.modules for delete
   using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = auth.uid() ) );
+
+-- Course Notes
+create policy "Users can view their own course notes"
+  on public.course_notes for select
+  using ( auth.uid() = user_id );
+
+create policy "Users can insert their own course notes"
+  on public.course_notes for insert
+  with check ( auth.uid() = user_id );
+
+create policy "Users can update their own course notes"
+  on public.course_notes for update
+  using ( auth.uid() = user_id );
+
+create policy "Users can delete their own course notes"
+  on public.course_notes for delete
+  using ( auth.uid() = user_id );
 
 -- Study Sessions
 create policy "Users can view their own study sessions"
