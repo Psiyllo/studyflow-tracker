@@ -16,7 +16,6 @@ export function useCourseNotes(courseId: string) {
       setNotes(data || []);
     } catch (error) {
       console.error("Error loading notes:", error);
-      // Optionally set empty notes or handle error state
       setNotes([]);
     }
   };

@@ -114,11 +114,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
       setSessionStartTimeMs(now);
     }
 
-    console.log('[TimerContext] startTimer', {
-      resumeFromDuration: data.resumeFromDuration,
-      pausedTimeMs: (data.resumeFromDuration || 0) * 1000,
-      now,
-    });
+
   };
 
   const pauseTimer = () => {
@@ -126,7 +122,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
       // Acumula o tempo decorrido desde que iniciou (ou retomou)
       const elapsed = Date.now() - startTimeMs;
       setPausedTimeMs((prev) => (prev || 0) + elapsed);
-      console.log('[TimerContext] pauseTimer', { elapsed, totalPausedTimeMs: (pausedTimeMs || 0) + elapsed });
+
     }
     setIsPaused(true);
   };
@@ -134,7 +130,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
   const resumeTimer = () => {
     setStartTimeMs(Date.now()); // Reinicia o contador
     setIsPaused(false);
-    console.log('[TimerContext] resumeTimer', { now: Date.now(), pausedTimeMs });
+
   };
 
   const finishSession = async () => {
@@ -149,15 +145,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
 
     const endTimeMs = Date.now();
 
-    console.log('[TimerContext] finishSession', {
-      sessionStartTimeMs,
-      endTimeMs,
-      pausedTimeMs,
-      startTimeMs,
-      isRunning,
-      isPaused,
-      totalSeconds,
-    });
+
 
     try {
       // Se está retomando uma sessão existente, faz UPDATE
