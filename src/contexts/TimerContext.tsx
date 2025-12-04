@@ -17,7 +17,7 @@ interface TimerContextType {
   isPaused: boolean;
   elapsedSeconds: number;
   sessionData: SessionData | null;
-  startTimer: (data: SessionData) => void;
+  startTimer: (data: SessionData) => Promise<void>;
   pauseTimer: () => void;
   resumeTimer: () => void;
   finishSession: () => Promise<void>;
@@ -101,7 +101,7 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [isRunning, isPaused, startTimeMs, pausedTimeMs]);
 
-  const startTimer = (data: SessionData) => {
+  const startTimer = async (data: SessionData) => {
     const now = Date.now();
     setSessionData(data);
     setIsRunning(true);
@@ -109,12 +109,29 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     setStartTimeMs(now); // Timestamp de agora
     setPausedTimeMs((data.resumeFromDuration || 0) * 1000); // Converter segundos para ms
     
-    // Se não for retomada, salva o start_time; caso contrário, usa o anterior
+    // Se não for retomada, salva o start_time; caso contrário, busca o start_time original
     if (!data.resumeFromSession) {
       setSessionStartTimeMs(now);
+    } else {
+      // Buscar o start_time original da sessão retomada
+      try {
+        const { data: sessionRecord, error } = await supabase
+          .from('study_sessions')
+          .select('start_time')
+          .eq('id', data.resumeFromSession)
+          .single();
+        
+        if (!error && sessionRecord) {
+          setSessionStartTimeMs(new Date(sessionRecord.start_time).getTime());
+        } else {
+          // Fallback: usar o timestamp atual se não conseguir buscar
+          setSessionStartTimeMs(now);
+        }
+      } catch (err) {
+        console.error('Error fetching original start_time:', err);
+        setSessionStartTimeMs(now);
+      }
     }
-
-
   };
 
   const pauseTimer = () => {
@@ -122,7 +139,6 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
       // Acumula o tempo decorrido desde que iniciou (ou retomou)
       const elapsed = Date.now() - startTimeMs;
       setPausedTimeMs((prev) => (prev || 0) + elapsed);
-
     }
     setIsPaused(true);
   };
@@ -130,7 +146,6 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
   const resumeTimer = () => {
     setStartTimeMs(Date.now()); // Reinicia o contador
     setIsPaused(false);
-
   };
 
   const finishSession = async () => {
@@ -144,8 +159,6 @@ export const TimerProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const endTimeMs = Date.now();
-
-
 
     try {
       // Se está retomando uma sessão existente, faz UPDATE
