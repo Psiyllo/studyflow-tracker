@@ -77,88 +77,89 @@ alter table public.modules enable row level security;
 alter table public.study_sessions enable row level security;
 
 -- POLICIES
+-- Performance: Using (select auth.uid()) evaluates the function only once per query
 
 -- Profiles
 create policy "Users can view their own profile"
   on public.profiles for select
-  using ( auth.uid() = id );
+  using ( (select auth.uid()) = id );
 
 create policy "Users can update their own profile"
   on public.profiles for update
-  using ( auth.uid() = id );
+  using ( (select auth.uid()) = id );
 
 create policy "Users can insert their own profile"
   on public.profiles for insert
-  with check ( auth.uid() = id );
+  with check ( (select auth.uid()) = id );
 
 -- Courses
 create policy "Users can view their own courses"
   on public.courses for select
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 create policy "Users can insert their own courses"
   on public.courses for insert
-  with check ( auth.uid() = user_id );
+  with check ( (select auth.uid()) = user_id );
 
 create policy "Users can update their own courses"
   on public.courses for update
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 create policy "Users can delete their own courses"
   on public.courses for delete
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 -- Modules
 -- Access control for modules is based on the course they belong to.
 create policy "Users can view modules of their courses"
   on public.modules for select
-  using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = auth.uid() ) );
+  using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = (select auth.uid()) ) );
 
 create policy "Users can insert modules to their courses"
   on public.modules for insert
-  with check ( exists ( select 1 from public.courses where id = modules.course_id and user_id = auth.uid() ) );
+  with check ( exists ( select 1 from public.courses where id = modules.course_id and user_id = (select auth.uid()) ) );
 
 create policy "Users can update modules of their courses"
   on public.modules for update
-  using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = auth.uid() ) );
+  using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = (select auth.uid()) ) );
 
 create policy "Users can delete modules of their courses"
   on public.modules for delete
-  using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = auth.uid() ) );
+  using ( exists ( select 1 from public.courses where id = modules.course_id and user_id = (select auth.uid()) ) );
 
 -- Course Notes
 create policy "Users can view their own course notes"
   on public.course_notes for select
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 create policy "Users can insert their own course notes"
   on public.course_notes for insert
-  with check ( auth.uid() = user_id );
+  with check ( (select auth.uid()) = user_id );
 
 create policy "Users can update their own course notes"
   on public.course_notes for update
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 create policy "Users can delete their own course notes"
   on public.course_notes for delete
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 -- Study Sessions
 create policy "Users can view their own study sessions"
   on public.study_sessions for select
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 create policy "Users can insert their own study sessions"
   on public.study_sessions for insert
-  with check ( auth.uid() = user_id );
+  with check ( (select auth.uid()) = user_id );
 
 create policy "Users can update their own study sessions"
   on public.study_sessions for update
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 create policy "Users can delete their own study sessions"
   on public.study_sessions for delete
-  using ( auth.uid() = user_id );
+  using ( (select auth.uid()) = user_id );
 
 -- FUNCTIONS & TRIGGERS
 
@@ -179,3 +180,21 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- PERFORMANCE INDEXES
+-- Indexes on foreign keys improve JOIN performance and query speed
+
+-- Courses table indexes
+create index if not exists idx_courses_user_id on public.courses(user_id);
+
+-- Course notes table indexes
+create index if not exists idx_course_notes_user_id on public.course_notes(user_id);
+create index if not exists idx_course_notes_course_id on public.course_notes(course_id);
+
+-- Modules table indexes
+create index if not exists idx_modules_course_id on public.modules(course_id);
+
+-- Study sessions table indexes
+create index if not exists idx_study_sessions_user_id on public.study_sessions(user_id);
+create index if not exists idx_study_sessions_course_id on public.study_sessions(course_id);
+create index if not exists idx_study_sessions_module_id on public.study_sessions(module_id);
