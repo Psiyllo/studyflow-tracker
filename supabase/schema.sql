@@ -56,7 +56,9 @@ create table public.study_sessions (
 );
 
 -- DAILY STATS VIEW
-create or replace view public.daily_stats as
+-- SECURITY INVOKER: respects RLS policies (users only see their own stats)
+create or replace view public.daily_stats
+with (security_invoker = true) as
 select
   user_id,
   date(start_time) as date,
@@ -161,8 +163,11 @@ create policy "Users can delete their own study sessions"
 -- FUNCTIONS & TRIGGERS
 
 -- Function to handle new user signup
+-- SET search_path prevents search path injection attacks
 create or replace function public.handle_new_user()
-returns trigger as $$
+returns trigger
+set search_path = public
+as $$
 begin
   insert into public.profiles (id, display_name)
   values (new.id, new.raw_user_meta_data->>'full_name');
